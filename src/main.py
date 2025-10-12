@@ -85,165 +85,7 @@ def create_app() -> FastAPI:
     # Setup templates
     templates = Jinja2Templates(directory="templates")
     
-    # Global variables for caching
-    last_report: Optional[str] = None
-    last_report_time: Optional[str] = None
-    
-    def load_cached_report():
-        """Load report from cache or file."""
-        nonlocal last_report, last_report_time
-        if not last_report:
-            # Try to read existing report
-            report_path = Path("out/report.md")
-            if report_path.exists():
-                try:
-                    with open(report_path, 'r', encoding='utf-8') as f:
-                        last_report = f.read()
-                        last_report_time = str(report_path.stat().st_mtime)
-                except Exception as e:
-                    print(f"Error reading report: {e}")
-                    return None
-            else:
-                return None
-        return last_report
-    
-    def refresh_report():
-        """Generate a new report."""
-        nonlocal last_report, last_report_time
-        try:
-            # Run the pipeline to generate a new report
-            pipeline = EdgeFinderPipeline(config)
-            report = pipeline.run()
-            
-            # Render the report
-            renderer = NewsletterRenderer(config.timezone)
-            markdown_content = renderer.render_markdown(report)
-            
-            # Update cache
-            last_report = markdown_content
-            last_report_time = str(datetime.utcnow())
-            
-            # Save to file
-            output_dir = Path("out")
-            output_dir.mkdir(exist_ok=True)
-            report_path = output_dir / "report.md"
-            with open(report_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
-            
-            return markdown_content
-        except Exception as e:
-            print(f"Error generating report: {e}")
-            return None
-    
-    @app.get("/", response_class=HTMLResponse)
-    async def home(request: Request):
-        """Serve the main web interface."""
-        return templates.TemplateResponse("index.html", {"request": request})
-    
-    @app.get("/health")
-    async def health_check():
-        """Health check endpoint."""
-        return {"status": "healthy", "service": "edgefinder"}
-    
-    @app.get("/debug")
-    async def debug_info():
-        """Debug endpoint to check environment variables."""
-        from src.config import load_config
-        config = load_config()
-        return {
-            "sports_filter": config.sports_filter,
-            "use_fixtures": config.use_fixtures,
-            "odds_api_key_set": bool(config.odds_api_key),
-            "kalshi_api_key_set": bool(config.kalshi_api_key_id and config.kalshi_private_key),
-            "kalshi_api_key_id_set": bool(config.kalshi_api_key_id),
-            "kalshi_private_key_set": bool(config.kalshi_private_key),
-            "timezone": config.timezone
-        }
-    
-    @app.get("/debug/robinhood")
-    async def debug_robinhood():
-        """Debug endpoint to test Robinhood prediction markets."""
-        from src.config import load_config
-        from src.data.simple_robinhood_client import SimpleRobinhoodClient
-        config = load_config()
-        client = SimpleRobinhoodClient(config)
-        
-        try:
-            markets = client.get_prediction_markets()
-            return {
-                "status": "success",
-                "markets_count": len(markets),
-                "sample_markets": [{"title": m.title, "last_price": m.last_price, "volume": m.volume} for m in markets[:3]]
-            }
-        except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e)
-            }
-    
-    @app.get("/debug/odds")
-    async def debug_odds():
-        """Debug endpoint to test sportsbook API connection."""
-        from src.config import load_config
-        from src.data.odds_client import OddsClient
-        import requests
-        config = load_config()
-        client = OddsClient(config)
-        
-        # Test direct API call first
-        direct_api_result = {}
-        try:
-            url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
-            params = {
-                'apiKey': config.odds_api_key,
-                'regions': 'us',
-                'markets': 'h2h',
-                'oddsFormat': 'american',
-                'dateFormat': 'iso'
-            }
-            response = requests.get(url, params=params, timeout=10)
-            data = response.json() if response.status_code == 200 else []
-            direct_api_result = {
-                "status_code": response.status_code,
-                "response_length": len(response.text) if response.text else 0,
-                "success": response.status_code == 200,
-                "games_count": len(data) if isinstance(data, list) else 0,
-                "sample_game": data[0] if data and len(data) > 0 else None
-            }
-        except Exception as e:
-            direct_api_result = {"error": str(e)}
-        
-        # Test fetching odds for one sport
-        try:
-            odds = client.get_odds("americanfootball_nfl")
-            return {
-                "status": "success",
-                "odds_count": len(odds),
-                "sample_odds": odds[0].__dict__ if odds else None,
-                "api_key_set": bool(config.odds_api_key),
-                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
-                "direct_api_test": direct_api_result
-            }
-        except Exception as e:
-            import traceback
-            return {
-                "status": "error",
-                "error": str(e),
-                "traceback": traceback.format_exc(),
-                "api_key_set": bool(config.odds_api_key),
-                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
-                "direct_api_test": direct_api_result
-            }
-    
-    @app.get("/api/latest", response_class=PlainTextResponse)
-    async def get_latest_report():
-        """Get the latest report with real data."""
-        try:
-            # Generate a simple report using real API data
-            return generate_simple_real_report()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
-    
+    # Simple report generation function
     def generate_simple_real_report():
         """Generate a simple report using real API data."""
         import requests
@@ -374,10 +216,119 @@ def create_app() -> FastAPI:
         
         return "\n".join(report)
     
+    @app.get("/", response_class=HTMLResponse)
+    async def home(request: Request):
+        """Serve the main web interface."""
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint."""
+        return {"status": "healthy", "service": "edgefinder"}
+    
+    @app.get("/debug")
+    async def debug_info():
+        """Debug endpoint to check environment variables."""
+        from src.config import load_config
+        config = load_config()
+        return {
+            "sports_filter": config.sports_filter,
+            "use_fixtures": config.use_fixtures,
+            "odds_api_key_set": bool(config.odds_api_key),
+            "kalshi_api_key_set": bool(config.kalshi_api_key_id and config.kalshi_private_key),
+            "kalshi_api_key_id_set": bool(config.kalshi_api_key_id),
+            "kalshi_private_key_set": bool(config.kalshi_private_key),
+            "timezone": config.timezone
+        }
+    
+    @app.get("/debug/robinhood")
+    async def debug_robinhood():
+        """Debug endpoint to test Robinhood prediction markets."""
+        from src.config import load_config
+        from src.data.simple_robinhood_client import SimpleRobinhoodClient
+        config = load_config()
+        client = SimpleRobinhoodClient(config)
+        
+        try:
+            markets = client.get_prediction_markets()
+            return {
+                "status": "success",
+                "markets_count": len(markets),
+                "sample_markets": [{"title": m.title, "last_price": m.last_price, "volume": m.volume} for m in markets[:3]]
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
+    @app.get("/debug/odds")
+    async def debug_odds():
+        """Debug endpoint to test sportsbook API connection."""
+        from src.config import load_config
+        from src.data.odds_client import OddsClient
+        import requests
+        config = load_config()
+        client = OddsClient(config)
+        
+        # Test direct API call first
+        direct_api_result = {}
+        try:
+            url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
+            params = {
+                'apiKey': config.odds_api_key,
+                'regions': 'us',
+                'markets': 'h2h',
+                'oddsFormat': 'american',
+                'dateFormat': 'iso'
+            }
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json() if response.status_code == 200 else []
+            direct_api_result = {
+                "status_code": response.status_code,
+                "response_length": len(response.text) if response.text else 0,
+                "success": response.status_code == 200,
+                "games_count": len(data) if isinstance(data, list) else 0,
+                "sample_game": data[0] if data and len(data) > 0 else None
+            }
+        except Exception as e:
+            direct_api_result = {"error": str(e)}
+        
+        # Test fetching odds for one sport
+        try:
+            odds = client.get_odds("americanfootball_nfl")
+            return {
+                "status": "success",
+                "odds_count": len(odds),
+                "sample_odds": odds[0].__dict__ if odds else None,
+                "api_key_set": bool(config.odds_api_key),
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
+                "direct_api_test": direct_api_result
+            }
+        except Exception as e:
+            import traceback
+            return {
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "api_key_set": bool(config.odds_api_key),
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
+                "direct_api_test": direct_api_result
+            }
+    
+    @app.get("/api/latest", response_class=PlainTextResponse)
+    async def get_latest_report():
+        """Get the latest report with real data."""
+        try:
+            # Generate a simple report using real API data
+            return generate_simple_real_report()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
+    
     @app.post("/api/refresh")
     async def refresh_latest_report():
         """Force refresh the latest report with new data."""
-        report = refresh_report()
+        report = generate_simple_real_report()
         if not report:
             raise HTTPException(status_code=500, detail="Failed to generate report")
         return {"status": "success", "message": "Report refreshed successfully"}
