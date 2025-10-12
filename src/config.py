@@ -18,7 +18,7 @@ def load_config() -> Config:
         odds_api_base_url=os.getenv("ODDS_API_BASE_URL", "https://api.theoddsapi.com/v4"),
         odds_api_key=os.getenv("ODDS_API_KEY", ""),
         timezone=os.getenv("EDGEFINDER_TIMEZONE", "America/Los_Angeles"),
-        sports_filter=os.getenv("SPORTS_FILTER", "baseball_mlb,americanfootball_nfl,basketball_nba,icehockey_nhl,soccer_epl").split(","),
+        sports_filter=os.getenv("SPORTS_FILTER", "baseball_mlb,americanfootball_nfl,basketball_nba,icehockey_nhl,soccer_epl").replace("SPORTS_FILTER = ", "").split(","),
         lookahead_hours=int(os.getenv("LOOKAHEAD_HOURS", "48")),
         min_volume=int(os.getenv("MIN_VOLUME", "100")),
         top_n=int(os.getenv("TOP_N", "10")),
