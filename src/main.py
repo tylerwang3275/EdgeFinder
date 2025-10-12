@@ -237,15 +237,138 @@ def create_app() -> FastAPI:
     
     @app.get("/api/latest", response_class=PlainTextResponse)
     async def get_latest_report():
-        """Get the latest report."""
-        # Try to load from cache first
-        report = load_cached_report()
-        if not report:
-            # If no cached report, generate a new one
-            report = refresh_report()
-            if not report:
-                raise HTTPException(status_code=500, detail="Failed to generate report")
-        return report
+        """Get the latest report with real data."""
+        try:
+            # Generate a simple report using real API data
+            return generate_simple_real_report()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
+    
+    def generate_simple_real_report():
+        """Generate a simple report using real API data."""
+        import requests
+        from datetime import datetime
+        import pytz
+        
+        # Get real NFL data
+        url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
+        params = {
+            'apiKey': config.odds_api_key,
+            'regions': 'us',
+            'markets': 'h2h',
+            'oddsFormat': 'american',
+            'dateFormat': 'iso'
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            return f"# EdgeFinder: Real-Time NFL Data\n\n❌ API Error: {response.status_code}\n\n"
+        
+        data = response.json()
+        tz = pytz.timezone(config.timezone)
+        now = datetime.now(tz)
+        
+        # Generate report
+        report = []
+        report.append("# EdgeFinder: Real-Time NFL Data")
+        report.append("")
+        report.append(f"**Generated:** {now.strftime('%Y-%m-%d %I:%M %p %Z')}")
+        report.append(f"**Total Games:** {len(data)}")
+        report.append("")
+        
+        # Find Seattle games
+        seattle_games = []
+        for game in data:
+            if 'seattle' in game.get('home_team', '').lower() or 'seattle' in game.get('away_team', '').lower():
+                seattle_games.append(game)
+        
+        if seattle_games:
+            report.append("## 🏠 Seattle Games")
+            report.append("")
+            for game in seattle_games:
+                home_team = game.get('home_team', '')
+                away_team = game.get('away_team', '')
+                commence_time = game.get('commence_time', '')
+                
+                # Parse time
+                try:
+                    game_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+                    game_time_local = game_time.astimezone(tz)
+                    time_str = game_time_local.strftime('%Y-%m-%d %I:%M %p %Z')
+                except:
+                    time_str = commence_time
+                
+                report.append(f"**{away_team} @ {home_team}**")
+                report.append(f"*{time_str}*")
+                
+                # Get best odds
+                bookmakers = game.get('bookmakers', [])
+                if bookmakers:
+                    best_away = None
+                    best_home = None
+                    for book in bookmakers:
+                        for market in book.get('markets', []):
+                            if market.get('key') == 'h2h':
+                                for outcome in market.get('outcomes', []):
+                                    if outcome.get('name') == away_team:
+                                        if best_away is None or outcome.get('price', 0) > best_away:
+                                            best_away = outcome.get('price')
+                                    elif outcome.get('name') == home_team:
+                                        if best_home is None or outcome.get('price', 0) > best_home:
+                                            best_home = outcome.get('price')
+                    
+                    if best_away and best_home:
+                        report.append(f"- **{away_team}:** +{best_away}")
+                        report.append(f"- **{home_team}:** {best_home}")
+                
+                report.append("")
+        
+        # Show all games
+        report.append("## 📊 All NFL Games")
+        report.append("")
+        report.append("| Away Team | Home Team | Start Time | Best Away Odds | Best Home Odds |")
+        report.append("|-----------|-----------|------------|----------------|----------------|")
+        
+        for game in data[:10]:  # Show first 10 games
+            home_team = game.get('home_team', '')
+            away_team = game.get('away_team', '')
+            commence_time = game.get('commence_time', '')
+            
+            # Parse time
+            try:
+                game_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+                game_time_local = game_time.astimezone(tz)
+                time_str = game_time_local.strftime('%m/%d %I:%M %p')
+            except:
+                time_str = commence_time[:16]
+            
+            # Get best odds
+            bookmakers = game.get('bookmakers', [])
+            best_away = "N/A"
+            best_home = "N/A"
+            
+            if bookmakers:
+                for book in bookmakers:
+                    for market in book.get('markets', []):
+                        if market.get('key') == 'h2h':
+                            for outcome in market.get('outcomes', []):
+                                if outcome.get('name') == away_team:
+                                    price = outcome.get('price')
+                                    if price and (best_away == "N/A" or price > int(best_away.replace('+', ''))):
+                                        best_away = f"+{price}" if price > 0 else str(price)
+                                elif outcome.get('name') == home_team:
+                                    price = outcome.get('price')
+                                    if price and (best_home == "N/A" or price > int(best_home.replace('+', ''))):
+                                        best_home = f"+{price}" if price > 0 else str(price)
+            
+            report.append(f"| {away_team} | {home_team} | {time_str} | {best_away} | {best_home} |")
+        
+        report.append("")
+        report.append("---")
+        report.append("")
+        report.append("*Real-time data from TheOddsAPI*")
+        
+        return "\n".join(report)
     
     @app.post("/api/refresh")
     async def refresh_latest_report():
