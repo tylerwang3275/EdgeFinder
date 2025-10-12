@@ -61,33 +61,23 @@ class RobinhoodClient:
         
         # Create prediction markets for each team winning
         home_market = KalshiMarket(
-            id=f"robinhood-{odds.game_id}-home-win",
+            market_id=f"robinhood-{odds.game_id}-home-win",
             title=f"Will {odds.home_team} beat {odds.away_team}?",
-            description=f"Prediction market for {odds.home_team} vs {odds.away_team}",
+            event_time=odds.start_time,
             last_price=home_robinhood_prob,
-            no_price=1.0 - home_robinhood_prob,
             volume=random.randint(500, 5000),  # Simulate volume
-            status="open",
-            close_time=odds.start_time,
-            sport=odds.sport,
-            home_team=odds.home_team,
-            away_team=odds.away_team,
-            start_time=odds.start_time
+            market_side="YES",
+            outcome_description=f"{odds.home_team} wins"
         )
         
         away_market = KalshiMarket(
-            id=f"robinhood-{odds.game_id}-away-win",
+            market_id=f"robinhood-{odds.game_id}-away-win",
             title=f"Will {odds.away_team} beat {odds.home_team}?",
-            description=f"Prediction market for {odds.away_team} vs {odds.home_team}",
+            event_time=odds.start_time,
             last_price=away_robinhood_prob,
-            no_price=1.0 - away_robinhood_prob,
             volume=random.randint(500, 5000),  # Simulate volume
-            status="open",
-            close_time=odds.start_time,
-            sport=odds.sport,
-            home_team=odds.home_team,
-            away_team=odds.away_team,
-            start_time=odds.start_time
+            market_side="YES",
+            outcome_description=f"{odds.away_team} wins"
         )
         
         markets.extend([home_market, away_market])
@@ -161,34 +151,24 @@ class RobinhoodClient:
         for fixture in fixtures:
             # Home team market
             home_market = KalshiMarket(
-                id=f"robinhood-fixture-{fixture['home_team'].lower().replace(' ', '-')}-win",
+                market_id=f"robinhood-fixture-{fixture['home_team'].lower().replace(' ', '-')}-win",
                 title=f"Will {fixture['home_team']} beat {fixture['away_team']}?",
-                description=f"Robinhood prediction market for {fixture['home_team']} vs {fixture['away_team']}",
+                event_time=fixture['start_time'],
                 last_price=fixture['home_robinhood_prob'],
-                no_price=1.0 - fixture['home_robinhood_prob'],
                 volume=fixture['volume'],
-                status="open",
-                close_time=fixture['start_time'],
-                sport=fixture['sport'],
-                home_team=fixture['home_team'],
-                away_team=fixture['away_team'],
-                start_time=fixture['start_time']
+                market_side="YES",
+                outcome_description=f"{fixture['home_team']} wins"
             )
             
             # Away team market
             away_market = KalshiMarket(
-                id=f"robinhood-fixture-{fixture['away_team'].lower().replace(' ', '-')}-win",
+                market_id=f"robinhood-fixture-{fixture['away_team'].lower().replace(' ', '-')}-win",
                 title=f"Will {fixture['away_team']} beat {fixture['home_team']}?",
-                description=f"Robinhood prediction market for {fixture['away_team']} vs {fixture['home_team']}",
+                event_time=fixture['start_time'],
                 last_price=fixture['away_robinhood_prob'],
-                no_price=1.0 - fixture['away_robinhood_prob'],
                 volume=fixture['volume'],
-                status="open",
-                close_time=fixture['start_time'],
-                sport=fixture['sport'],
-                home_team=fixture['home_team'],
-                away_team=fixture['away_team'],
-                start_time=fixture['start_time']
+                market_side="YES",
+                outcome_description=f"{fixture['away_team']} wins"
             )
             
             markets.extend([home_market, away_market])
