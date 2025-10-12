@@ -186,8 +186,29 @@ def create_app() -> FastAPI:
         """Debug endpoint to test sportsbook API connection."""
         from src.config import load_config
         from src.data.odds_client import OddsClient
+        import requests
         config = load_config()
         client = OddsClient(config)
+        
+        # Test direct API call first
+        direct_api_result = {}
+        try:
+            url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
+            params = {
+                'apiKey': config.odds_api_key,
+                'regions': 'us',
+                'markets': 'h2h',
+                'oddsFormat': 'american',
+                'dateFormat': 'iso'
+            }
+            response = requests.get(url, params=params, timeout=10)
+            direct_api_result = {
+                "status_code": response.status_code,
+                "response_length": len(response.text) if response.text else 0,
+                "success": response.status_code == 200
+            }
+        except Exception as e:
+            direct_api_result = {"error": str(e)}
         
         # Test fetching odds for one sport
         try:
@@ -197,7 +218,8 @@ def create_app() -> FastAPI:
                 "odds_count": len(odds),
                 "sample_odds": odds[0].__dict__ if odds else None,
                 "api_key_set": bool(config.odds_api_key),
-                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None"
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
+                "direct_api_test": direct_api_result
             }
         except Exception as e:
             import traceback
@@ -206,7 +228,8 @@ def create_app() -> FastAPI:
                 "error": str(e),
                 "traceback": traceback.format_exc(),
                 "api_key_set": bool(config.odds_api_key),
-                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None"
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None",
+                "direct_api_test": direct_api_result
             }
     
     @app.get("/api/latest", response_class=PlainTextResponse)
