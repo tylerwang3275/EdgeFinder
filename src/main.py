@@ -255,6 +255,45 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail="Failed to generate report")
         return {"status": "success", "message": "Report refreshed successfully"}
     
+    @app.get("/api/test-real-data")
+    async def test_real_data():
+        """Test endpoint to see real API data."""
+        import requests
+        config = load_config()
+        
+        try:
+            # Test direct API call
+            url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
+            params = {
+                'apiKey': config.odds_api_key,
+                'regions': 'us',
+                'markets': 'h2h',
+                'oddsFormat': 'american',
+                'dateFormat': 'iso'
+            }
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "status": "success",
+                    "games_count": len(data),
+                    "sample_games": [
+                        {
+                            "id": game.get("id"),
+                            "home_team": game.get("home_team"),
+                            "away_team": game.get("away_team"),
+                            "commence_time": game.get("commence_time"),
+                            "bookmakers_count": len(game.get("bookmakers", []))
+                        }
+                        for game in data[:5]  # First 5 games
+                    ]
+                }
+            else:
+                return {"status": "error", "status_code": response.status_code, "response": response.text}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+    
     @app.get("/api/csv")
     async def get_csv():
         """Download the CSV data."""
