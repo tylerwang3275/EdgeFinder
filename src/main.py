@@ -196,13 +196,17 @@ def create_app() -> FastAPI:
                 "status": "success",
                 "odds_count": len(odds),
                 "sample_odds": odds[0].__dict__ if odds else None,
-                "api_key_set": bool(config.odds_api_key)
+                "api_key_set": bool(config.odds_api_key),
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None"
             }
         except Exception as e:
+            import traceback
             return {
                 "status": "error",
                 "error": str(e),
-                "api_key_set": bool(config.odds_api_key)
+                "traceback": traceback.format_exc(),
+                "api_key_set": bool(config.odds_api_key),
+                "api_key_preview": config.odds_api_key[:10] + "..." if config.odds_api_key else "None"
             }
     
     @app.get("/api/latest", response_class=PlainTextResponse)

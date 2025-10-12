@@ -45,6 +45,8 @@ class OddsClient:
         for sport in sports_list:
             try:
                 print(f"Fetching odds for sport: {sport}")
+                print(f"API Key: {self.api_key[:10]}..." if self.api_key else "No API key")
+                print(f"Base URL: {self.base_url}")
                 odds = self._fetch_sport_odds(sport, hours)
                 print(f"Successfully fetched {len(odds)} odds for {sport}")
                 all_odds.extend(odds)
@@ -196,11 +198,11 @@ class OddsClient:
                 total_under=45.5
             ),
             SportsbookOdds(
-                game_id="fixture_1",
+                game_id="nfl_week6_1",
                 sport="americanfootball_nfl",
                 away_team="Seattle Seahawks",
                 home_team="San Francisco 49ers",
-                start_time=base_time,
+                start_time=base_time + timedelta(hours=6),  # Sunday afternoon
                 book_name="FanDuel",
                 moneyline_away=115,
                 moneyline_home=-135,
@@ -210,7 +212,21 @@ class OddsClient:
                 total_under=45.5
             ),
             SportsbookOdds(
-                game_id="fixture_2",
+                game_id="nfl_week6_2",
+                sport="americanfootball_nfl",
+                away_team="Dallas Cowboys",
+                home_team="Philadelphia Eagles",
+                start_time=base_time + timedelta(hours=9),  # Sunday night
+                book_name="DraftKings",
+                moneyline_away=120,
+                moneyline_home=-140,
+                spread_away=2.5,
+                spread_home=-2.5,
+                total_over=47.5,
+                total_under=47.5
+            ),
+            SportsbookOdds(
+                game_id="nba_preseason_1",
                 sport="basketball_nba",
                 away_team="Los Angeles Lakers",
                 home_team="Golden State Warriors",
@@ -224,21 +240,7 @@ class OddsClient:
                 total_under=220.5
             ),
             SportsbookOdds(
-                game_id="fixture_3",
-                sport="baseball_mlb",
-                away_team="Seattle Mariners",
-                home_team="Houston Astros",
-                start_time=base_time - timedelta(hours=12),
-                book_name="DraftKings",
-                moneyline_away=150,
-                moneyline_home=-180,
-                spread_away=1.5,
-                spread_home=-1.5,
-                total_over=8.5,
-                total_under=8.5
-            ),
-            SportsbookOdds(
-                game_id="fixture_4",
+                game_id="nhl_oct_1",
                 sport="icehockey_nhl",
                 away_team="Seattle Kraken",
                 home_team="Vancouver Canucks",
@@ -252,17 +254,17 @@ class OddsClient:
                 total_under=6.5
             ),
             SportsbookOdds(
-                game_id="fixture_5",
-                sport="americanfootball_ncaaf",
-                away_team="Washington Huskies",
-                home_team="Oregon Ducks",
-                start_time=base_time + timedelta(hours=6),
+                game_id="mlb_playoffs_1",
+                sport="baseball_mlb",
+                away_team="Houston Astros",
+                home_team="New York Yankees",
+                start_time=base_time + timedelta(hours=18),
                 book_name="DraftKings",
-                moneyline_away=130,
-                moneyline_home=-150,
-                spread_away=3.5,
-                spread_home=-3.5,
-                total_over=65.5,
-                total_under=65.5
+                moneyline_away=150,
+                moneyline_home=-180,
+                spread_away=1.5,
+                spread_home=-1.5,
+                total_over=8.5,
+                total_under=8.5
             )
         ]
