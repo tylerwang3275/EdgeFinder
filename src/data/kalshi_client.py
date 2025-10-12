@@ -21,6 +21,13 @@ class KalshiClient:
             'Content-Type': 'application/json',
             'User-Agent': 'EdgeFinder/1.0'
         })
+        
+        # Add authentication if available
+        self.api_key = getattr(config, 'kalshi_api_key', None)
+        if self.api_key:
+            self.session.headers.update({
+                'Authorization': f'Bearer {self.api_key}'
+            })
     
     def get_markets(self, lookahead_hours: Optional[int] = None) -> List[KalshiMarket]:
         """
@@ -67,7 +74,9 @@ class KalshiClient:
             
         except requests.RequestException as e:
             print(f"Error fetching Kalshi markets: {e}")
-            return []
+            # If API fails, fall back to fixtures for demo
+            print("Falling back to fixture data for demo purposes")
+            return self._get_fixture_markets()
     
     def _parse_market(self, data: Dict[str, Any]) -> Optional[KalshiMarket]:
         """Parse a single market from Kalshi API response."""
