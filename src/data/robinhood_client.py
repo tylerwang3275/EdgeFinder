@@ -46,8 +46,8 @@ class RobinhoodClient:
         markets = []
         
         # Calculate implied probabilities from sportsbook odds
-        home_prob = self._american_to_probability(odds.home_odds)
-        away_prob = self._american_to_probability(odds.away_odds)
+        home_prob = self._american_to_probability(odds.moneyline_home)
+        away_prob = self._american_to_probability(odds.moneyline_away)
         
         # Add some market inefficiencies to simulate Robinhood prediction markets
         # Robinhood markets often have different pricing due to:
