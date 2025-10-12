@@ -12,7 +12,7 @@ from src.core.odds_math import (
     american_to_implied_probability, calculate_discrepancy,
     calculate_edge_vs_best, calculate_payout_ratio, calculate_expected_value
 )
-from src.data.robinhood_client import RobinhoodClient
+from src.data.simple_robinhood_client import SimpleRobinhoodClient
 from src.data.odds_client import OddsClient
 from src.data.mapping import (
     create_game_from_market, match_games_within_timeframe,
@@ -26,7 +26,7 @@ class EdgeFinderPipeline:
     
     def __init__(self, config: Config):
         self.config = config
-        self.robinhood_client = RobinhoodClient(config)
+        self.robinhood_client = SimpleRobinhoodClient(config)
         self.odds_client = OddsClient(config)
         self.logger = get_logger()
     

@@ -136,9 +136,9 @@ def create_app() -> FastAPI:
     async def debug_robinhood():
         """Debug endpoint to test Robinhood prediction markets."""
         from src.config import load_config
-        from src.data.robinhood_client import RobinhoodClient
+        from src.data.simple_robinhood_client import SimpleRobinhoodClient
         config = load_config()
-        client = RobinhoodClient(config)
+        client = SimpleRobinhoodClient(config)
         
         try:
             markets = client.get_prediction_markets()
