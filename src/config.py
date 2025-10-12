@@ -15,7 +15,7 @@ def load_config() -> Config:
     """Load configuration from environment variables."""
     return Config(
         kalshi_base_url=os.getenv("KALSHI_BASE_URL", "https://api.elections.kalshi.com"),
-        odds_api_base_url=os.getenv("ODDS_API_BASE_URL", "https://api.the-odds-api.com/v4"),
+        odds_api_base_url=os.getenv("ODDS_API_BASE_URL", "https://api.the-odds-api.com/v4").replace("api.theoddsapi.com", "api.the-odds-api.com"),
         odds_api_key=os.getenv("ODDS_API_KEY", ""),
         kalshi_api_key=os.getenv("KALSHI_API_KEY", ""),
         kalshi_api_key_id=os.getenv("KALSHI_API_KEY_ID", ""),
