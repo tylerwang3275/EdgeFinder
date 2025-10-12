@@ -107,6 +107,34 @@ def create_app() -> FastAPI:
                 return None
         return last_report
     
+    def refresh_report():
+        """Generate a new report."""
+        nonlocal last_report, last_report_time
+        try:
+            # Run the pipeline to generate a new report
+            pipeline = EdgeFinderPipeline(config)
+            report = pipeline.run()
+            
+            # Render the report
+            renderer = NewsletterRenderer(config.timezone)
+            markdown_content = renderer.render_markdown(report)
+            
+            # Update cache
+            last_report = markdown_content
+            last_report_time = str(datetime.utcnow())
+            
+            # Save to file
+            output_dir = Path("out")
+            output_dir.mkdir(exist_ok=True)
+            report_path = output_dir / "report.md"
+            with open(report_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            
+            return markdown_content
+        except Exception as e:
+            print(f"Error generating report: {e}")
+            return None
+    
     @app.get("/", response_class=HTMLResponse)
     async def home(request: Request):
         """Serve the main web interface."""
@@ -180,10 +208,22 @@ def create_app() -> FastAPI:
     @app.get("/api/latest", response_class=PlainTextResponse)
     async def get_latest_report():
         """Get the latest report."""
+        # Try to load from cache first
         report = load_cached_report()
         if not report:
-            raise HTTPException(status_code=404, detail="No report available")
+            # If no cached report, generate a new one
+            report = refresh_report()
+            if not report:
+                raise HTTPException(status_code=500, detail="Failed to generate report")
         return report
+    
+    @app.post("/api/refresh")
+    async def refresh_latest_report():
+        """Force refresh the latest report with new data."""
+        report = refresh_report()
+        if not report:
+            raise HTTPException(status_code=500, detail="Failed to generate report")
+        return {"status": "success", "message": "Report refreshed successfully"}
     
     @app.get("/api/csv")
     async def get_csv():
