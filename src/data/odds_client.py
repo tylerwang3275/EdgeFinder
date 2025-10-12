@@ -57,10 +57,13 @@ class OddsClient:
                 # Continue with other sports, but log the error
                 continue
         
-        # If we got no odds at all, fall back to fixtures for demo
+        # If we got no odds at all, raise an error instead of falling back to fixtures
         if not all_odds and not self.config.use_fixtures:
-            print("⚠️ No odds fetched from API, falling back to fixtures for demo")
-            return self._get_fixture_odds()
+            print("❌ No odds fetched from API!")
+            print(f"   Sports attempted: {sports_list}")
+            print(f"   API Key available: {bool(self.api_key)}")
+            print(f"   Base URL: {self.base_url}")
+            raise Exception(f"Failed to fetch odds for any sport. Sports attempted: {sports_list}")
         
         return all_odds
     
