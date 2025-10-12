@@ -385,27 +385,6 @@ def create_app() -> FastAPI:
             media_type="text/csv"
         )
     
-    @app.post("/refresh")
-    async def refresh_report():
-        """Refresh the report by running the pipeline."""
-        nonlocal last_report, last_report_time
-        
-        try:
-            run_pipeline()
-            
-            # Read the new report
-            report_path = Path("out/report.md")
-            if report_path.exists():
-                with open(report_path, 'r', encoding='utf-8') as f:
-                    last_report = f.read()
-                    last_report_time = str(report_path.stat().st_mtime)
-                
-                return {"status": "success", "message": "Report refreshed"}
-            else:
-                raise HTTPException(status_code=500, detail="Report generation failed")
-                
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Refresh failed: {str(e)}")
     
     return app
 
