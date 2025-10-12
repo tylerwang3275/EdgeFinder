@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from src.core.models import KalshiMarket, Config
 from src.util.time import get_time_window
+from src.auth.kalshi_auth import KalshiAuth
 
 
 class KalshiClient:
@@ -22,41 +23,75 @@ class KalshiClient:
             'User-Agent': 'EdgeFinder/1.0'
         })
         
-        # Add authentication if available
-        self.api_key = getattr(config, 'kalshi_api_key', None)
-        if self.api_key:
-            # Try different authentication methods
-            if self.api_key.startswith('Bearer '):
-                self.session.headers.update({
-                    'Authorization': self.api_key
-                })
-            else:
-                self.session.headers.update({
-                    'Authorization': f'Bearer {self.api_key}'
-                })
+        # Initialize JWT authentication if credentials are available
+        self.auth = None
+        self.api_key_id = getattr(config, 'kalshi_api_key_id', None)
+        self.private_key = getattr(config, 'kalshi_private_key', None)
+        
+        if self.api_key_id and self.private_key:
+            try:
+                self.auth = KalshiAuth(self.api_key_id, self.private_key)
+                print(f"✅ Kalshi JWT authentication initialized")
+            except Exception as e:
+                print(f"❌ Failed to initialize Kalshi authentication: {e}")
+                self.auth = None
     
     def test_connection(self) -> Dict[str, Any]:
         """Test connection to Kalshi API."""
-        try:
-            # Try to access a simple endpoint
-            url = f"{self.base_url}/markets"
-            params = {'limit': 1}
-            
-            response = self.session.get(url, params=params, timeout=10)
-            
-            return {
-                'status': 'success' if response.status_code == 200 else 'error',
-                'status_code': response.status_code,
-                'message': response.text[:200] if response.status_code != 200 else 'Connected successfully',
-                'has_auth': bool(self.api_key)
-            }
-        except Exception as e:
-            return {
-                'status': 'error',
-                'status_code': 0,
-                'message': str(e),
-                'has_auth': bool(self.api_key)
-            }
+        endpoints_to_try = [
+            f"{self.base_url}/events",
+            f"{self.base_url}/markets",
+            f"{self.base_url}/",
+        ]
+        
+        for url in endpoints_to_try:
+            try:
+                params = {'limit': 1} if 'markets' in url else {}
+                
+                # Use JWT authentication if available
+                if self.auth:
+                    headers = self.auth.get_auth_headers()
+                    response = self.session.get(url, params=params, headers=headers, timeout=30)
+                else:
+                    response = self.session.get(url, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    return {
+                        'status': 'success',
+                        'status_code': response.status_code,
+                        'message': f'Connected successfully to {url}',
+                        'has_auth': bool(self.auth),
+                        'endpoint': url
+                    }
+                elif response.status_code == 401:
+                    return {
+                        'status': 'auth_error',
+                        'status_code': response.status_code,
+                        'message': 'Authentication failed - check API key',
+                        'has_auth': bool(self.auth),
+                        'endpoint': url
+                    }
+                elif response.status_code == 403:
+                    return {
+                        'status': 'access_denied',
+                        'status_code': response.status_code,
+                        'message': 'Access forbidden - API access may not be approved',
+                        'has_auth': bool(self.auth),
+                        'endpoint': url
+                    }
+                else:
+                    continue  # Try next endpoint
+                    
+            except Exception as e:
+                continue  # Try next endpoint
+        
+        return {
+            'status': 'error',
+            'status_code': 0,
+            'message': 'All endpoints failed - check API key and network',
+            'has_auth': bool(self.auth),
+            'endpoint': 'none'
+        }
     
     def get_markets(self, lookahead_hours: Optional[int] = None) -> List[KalshiMarket]:
         """

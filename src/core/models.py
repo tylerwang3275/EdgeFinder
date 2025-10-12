@@ -102,6 +102,8 @@ class Config(BaseModel):
     odds_api_base_url: str
     odds_api_key: str
     kalshi_api_key: str = ""
+    kalshi_api_key_id: str = ""
+    kalshi_private_key: str = ""
     timezone: str
     sports_filter: List[str]
     lookahead_hours: int
