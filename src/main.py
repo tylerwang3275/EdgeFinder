@@ -215,7 +215,7 @@ def create_app() -> FastAPI:
         
         # Test fetching odds for one sport
         try:
-            odds = client.get_odds("baseball_mlb")
+            odds = client.get_odds("americanfootball_nfl")
             return {
                 "status": "success",
                 "odds_count": len(odds),
