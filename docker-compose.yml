@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  edgefinder:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - KALSHI_BASE_URL=${KALSHI_BASE_URL:-https://api.kalshi.com}
+      - ODDS_API_BASE_URL=${ODDS_API_BASE_URL:-https://api.theoddsapi.com/v4}
+      - ODDS_API_KEY=${ODDS_API_KEY}
+      - EDGEFINDER_TIMEZONE=${EDGEFINDER_TIMEZONE:-America/Los_Angeles}
+      - SPORTS_FILTER=${SPORTS_FILTER:-mlb,nfl,nba,nhl,soccer}
+      - LOOKAHEAD_HOURS=${LOOKAHEAD_HOURS:-48}
+      - MIN_VOLUME=${MIN_VOLUME:-100}
+      - TOP_N=${TOP_N:-10}
+      - USE_FIXTURES=${USE_FIXTURES:-false}
+    volumes:
+      - ./out:/app/out
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a cron service for scheduled updates
+  edgefinder-cron:
+    build: .
+    command: >
+      sh -c "
+        echo '0 13 * * * /app/scripts/run_once.sh' | crontab - &&
+        crond -f
+      "
+    environment:
+      - KALSHI_BASE_URL=${KALSHI_BASE_URL:-https://api.kalshi.com}
+      - ODDS_API_BASE_URL=${ODDS_API_BASE_URL:-https://api.theoddsapi.com/v4}
+      - ODDS_API_KEY=${ODDS_API_KEY}
+      - EDGEFINDER_TIMEZONE=${EDGEFINDER_TIMEZONE:-America/Los_Angeles}
+      - SPORTS_FILTER=${SPORTS_FILTER:-mlb,nfl,nba,nhl,soccer}
+      - LOOKAHEAD_HOURS=${LOOKAHEAD_HOURS:-48}
+      - MIN_VOLUME=${MIN_VOLUME:-100}
+      - TOP_N=${TOP_N:-10}
+      - USE_FIXTURES=${USE_FIXTURES:-false}
+    volumes:
+      - ./out:/app/out
+      - ./scripts:/app/scripts
+    restart: unless-stopped
+    depends_on:
+      - edgefinder

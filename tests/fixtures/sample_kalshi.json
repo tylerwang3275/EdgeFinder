@@ -1,0 +1,34 @@
+{
+  "markets": [
+    {
+      "id": "fixture_1",
+      "title": "Seattle Seahawks vs San Francisco 49ers",
+      "event_time": "2024-01-15T20:00:00Z",
+      "last_price": 0.45,
+      "volume": 1500,
+      "open_interest": 5000,
+      "market_side": "YES",
+      "outcome_description": "Seahawks win"
+    },
+    {
+      "id": "fixture_2",
+      "title": "Los Angeles Lakers vs Golden State Warriors",
+      "event_time": "2024-01-16T21:00:00Z",
+      "last_price": 0.62,
+      "volume": 2000,
+      "open_interest": 8000,
+      "market_side": "YES",
+      "outcome_description": "Lakers win"
+    },
+    {
+      "id": "fixture_3",
+      "title": "Seattle Mariners vs Houston Astros",
+      "event_time": "2024-01-15T19:00:00Z",
+      "last_price": 0.38,
+      "volume": 800,
+      "open_interest": 3000,
+      "market_side": "YES",
+      "outcome_description": "Mariners win"
+    }
+  ]
+}

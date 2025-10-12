@@ -1,0 +1,208 @@
+"""
+Main entry point for EdgeFinder.
+"""
+
+import os
+import sys
+import argparse
+from pathlib import Path
+from typing import Optional
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import PlainTextResponse, HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from src.config import load_config
+from src.core.pipeline import EdgeFinderPipeline
+from src.render.newsletter import NewsletterRenderer
+from src.util.log import setup_logging, get_logger
+
+
+def ensure_output_dir():
+    """Ensure output directory exists."""
+    output_dir = Path("out")
+    output_dir.mkdir(exist_ok=True)
+    return output_dir
+
+
+def run_pipeline() -> None:
+    """Run the EdgeFinder pipeline and generate reports."""
+    logger = get_logger()
+    logger.info("Starting EdgeFinder pipeline")
+    
+    try:
+        # Load configuration
+        config = load_config()
+        logger.info(f"Loaded configuration: {config.sports_filter}")
+        
+        # Ensure output directory
+        output_dir = ensure_output_dir()
+        
+        # Run pipeline
+        pipeline = EdgeFinderPipeline(config)
+        report = pipeline.run()
+        
+        # Render reports
+        renderer = NewsletterRenderer(config.timezone)
+        
+        # Generate Markdown report
+        markdown_content = renderer.render_markdown(report)
+        report_path = output_dir / "report.md"
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        logger.info(f"Generated report: {report_path}")
+        
+        # Generate CSV data
+        csv_path = output_dir / "edges.csv"
+        renderer.render_csv(report, str(csv_path))
+        logger.info(f"Generated CSV: {csv_path}")
+        
+        # Generate Seattle snippet
+        seattle_snippet = renderer.render_seattle_snippet(report.seattle_pick)
+        seattle_path = output_dir / "seattle.md"
+        with open(seattle_path, 'w', encoding='utf-8') as f:
+            f.write(seattle_snippet)
+        logger.info(f"Generated Seattle snippet: {seattle_path}")
+        
+        logger.info("Pipeline completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Pipeline failed: {e}")
+        sys.exit(1)
+
+
+def create_app() -> FastAPI:
+    """Create FastAPI application."""
+    app = FastAPI(
+        title="EdgeFinder",
+        description="Sports vs Prediction Markets Analysis",
+        version="1.0.0"
+    )
+    
+    # Mount static files
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    
+    # Setup templates
+    templates = Jinja2Templates(directory="templates")
+    
+    # Global variables for caching
+    last_report: Optional[str] = None
+    last_report_time: Optional[str] = None
+    
+    def load_cached_report():
+        """Load report from cache or file."""
+        nonlocal last_report, last_report_time
+        if not last_report:
+            # Try to read existing report
+            report_path = Path("out/report.md")
+            if report_path.exists():
+                try:
+                    with open(report_path, 'r', encoding='utf-8') as f:
+                        last_report = f.read()
+                        last_report_time = str(report_path.stat().st_mtime)
+                except Exception as e:
+                    print(f"Error reading report: {e}")
+                    return None
+            else:
+                return None
+        return last_report
+    
+    @app.get("/", response_class=HTMLResponse)
+    async def home(request: Request):
+        """Serve the main web interface."""
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint."""
+        return {"status": "healthy", "service": "edgefinder"}
+    
+    @app.get("/api/latest", response_class=PlainTextResponse)
+    async def get_latest_report():
+        """Get the latest report."""
+        report = load_cached_report()
+        if not report:
+            raise HTTPException(status_code=404, detail="No report available")
+        return report
+    
+    @app.get("/api/csv")
+    async def get_csv():
+        """Download the CSV data."""
+        csv_path = Path("out/edges.csv")
+        if not csv_path.exists():
+            raise HTTPException(status_code=404, detail="CSV file not available")
+        
+        return FileResponse(
+            path=str(csv_path),
+            filename="edgefinder_data.csv",
+            media_type="text/csv"
+        )
+    
+    @app.post("/refresh")
+    async def refresh_report():
+        """Refresh the report by running the pipeline."""
+        nonlocal last_report, last_report_time
+        
+        try:
+            run_pipeline()
+            
+            # Read the new report
+            report_path = Path("out/report.md")
+            if report_path.exists():
+                with open(report_path, 'r', encoding='utf-8') as f:
+                    last_report = f.read()
+                    last_report_time = str(report_path.stat().st_mtime)
+                
+                return {"status": "success", "message": "Report refreshed"}
+            else:
+                raise HTTPException(status_code=500, detail="Report generation failed")
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Refresh failed: {str(e)}")
+    
+    return app
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(description="EdgeFinder: Sports vs Prediction Markets")
+    parser.add_argument(
+        "command", 
+        choices=["run", "serve"], 
+        help="Command to run: 'run' for one-time execution, 'serve' for API server"
+    )
+    parser.add_argument(
+        "--host", 
+        default="0.0.0.0", 
+        help="Host for API server (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port", 
+        type=int, 
+        default=8000, 
+        help="Port for API server (default: 8000)"
+    )
+    parser.add_argument(
+        "--log-level", 
+        default="INFO", 
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level (default: INFO)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Setup logging
+    setup_logging(level=args.log_level)
+    logger = get_logger()
+    
+    if args.command == "run":
+        logger.info("Running EdgeFinder pipeline")
+        run_pipeline()
+    elif args.command == "serve":
+        logger.info(f"Starting EdgeFinder API server on {args.host}:{args.port}")
+        app = create_app()
+        uvicorn.run(app, host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()

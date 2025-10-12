@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fixture_1",
+    "sport_key": "americanfootball_nfl",
+    "home_team": "San Francisco 49ers",
+    "away_team": "Seattle Seahawks",
+    "commence_time": "2024-01-15T20:00:00Z",
+    "bookmakers": [
+      {
+        "title": "DraftKings",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              {
+                "name": "Seattle Seahawks",
+                "price": 120
+              },
+              {
+                "name": "San Francisco 49ers",
+                "price": -140
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "FanDuel",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              {
+                "name": "Seattle Seahawks",
+                "price": 115
+              },
+              {
+                "name": "San Francisco 49ers",
+                "price": -135
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fixture_2",
+    "sport_key": "basketball_nba",
+    "home_team": "Golden State Warriors",
+    "away_team": "Los Angeles Lakers",
+    "commence_time": "2024-01-16T21:00:00Z",
+    "bookmakers": [
+      {
+        "title": "DraftKings",
+        "markets": [
+          {
+            "key": "h2h",
+            "outcomes": [
+              {
+                "name": "Los Angeles Lakers",
+                "price": -110
+              },
+              {
+                "name": "Golden State Warriors",
+                "price": -110
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
