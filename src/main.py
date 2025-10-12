@@ -145,7 +145,7 @@ def create_app() -> FastAPI:
             return {
                 "status": "success",
                 "markets_count": len(markets),
-                "sample_markets": [{"title": m.title, "yes_price": m.yes_price, "volume": m.volume} for m in markets[:3]]
+                "sample_markets": [{"title": m.title, "last_price": m.last_price, "volume": m.volume} for m in markets[:3]]
             }
         except Exception as e:
             return {
