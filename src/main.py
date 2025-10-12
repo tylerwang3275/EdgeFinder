@@ -202,10 +202,13 @@ def create_app() -> FastAPI:
                 'dateFormat': 'iso'
             }
             response = requests.get(url, params=params, timeout=10)
+            data = response.json() if response.status_code == 200 else []
             direct_api_result = {
                 "status_code": response.status_code,
                 "response_length": len(response.text) if response.text else 0,
-                "success": response.status_code == 200
+                "success": response.status_code == 200,
+                "games_count": len(data) if isinstance(data, list) else 0,
+                "sample_game": data[0] if data and len(data) > 0 else None
             }
         except Exception as e:
             direct_api_result = {"error": str(e)}
