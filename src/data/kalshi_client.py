@@ -25,9 +25,38 @@ class KalshiClient:
         # Add authentication if available
         self.api_key = getattr(config, 'kalshi_api_key', None)
         if self.api_key:
-            self.session.headers.update({
-                'Authorization': f'Bearer {self.api_key}'
-            })
+            # Try different authentication methods
+            if self.api_key.startswith('Bearer '):
+                self.session.headers.update({
+                    'Authorization': self.api_key
+                })
+            else:
+                self.session.headers.update({
+                    'Authorization': f'Bearer {self.api_key}'
+                })
+    
+    def test_connection(self) -> Dict[str, Any]:
+        """Test connection to Kalshi API."""
+        try:
+            # Try to access a simple endpoint
+            url = f"{self.base_url}/markets"
+            params = {'limit': 1}
+            
+            response = self.session.get(url, params=params, timeout=10)
+            
+            return {
+                'status': 'success' if response.status_code == 200 else 'error',
+                'status_code': response.status_code,
+                'message': response.text[:200] if response.status_code != 200 else 'Connected successfully',
+                'has_auth': bool(self.api_key)
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'status_code': 0,
+                'message': str(e),
+                'has_auth': bool(self.api_key)
+            }
     
     def get_markets(self, lookahead_hours: Optional[int] = None) -> List[KalshiMarket]:
         """

@@ -126,8 +126,18 @@ def create_app() -> FastAPI:
             "sports_filter": config.sports_filter,
             "use_fixtures": config.use_fixtures,
             "odds_api_key_set": bool(config.odds_api_key),
+            "kalshi_api_key_set": bool(config.kalshi_api_key),
             "timezone": config.timezone
         }
+    
+    @app.get("/debug/kalshi")
+    async def debug_kalshi():
+        """Debug endpoint to test Kalshi API connection."""
+        from src.config import load_config
+        from src.data.kalshi_client import KalshiClient
+        config = load_config()
+        client = KalshiClient(config)
+        return client.test_connection()
     
     @app.get("/api/latest", response_class=PlainTextResponse)
     async def get_latest_report():
