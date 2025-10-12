@@ -49,10 +49,16 @@ class OddsClient:
                 print(f"Successfully fetched {len(odds)} odds for {sport}")
                 all_odds.extend(odds)
             except Exception as e:
-                print(f"Error fetching odds for {sport}: {e}")
+                print(f"❌ Error fetching odds for {sport}: {e}")
                 import traceback
                 traceback.print_exc()
+                # Continue with other sports, but log the error
                 continue
+        
+        # If we got no odds at all, fall back to fixtures for demo
+        if not all_odds and not self.config.use_fixtures:
+            print("⚠️ No odds fetched from API, falling back to fixtures for demo")
+            return self._get_fixture_odds()
         
         return all_odds
     
@@ -74,8 +80,10 @@ class OddsClient:
         print(f"Response status: {response.status_code}")
         
         if response.status_code != 200:
-            print(f"API Error: {response.status_code} - {response.text}")
-            return []
+            print(f"❌ API Error: {response.status_code} - {response.text}")
+            print(f"   URL: {url}")
+            print(f"   Params: {params}")
+            raise Exception(f"API returned {response.status_code}: {response.text}")
         
         data = response.json()
         print(f"Received {len(data)} games for {sport}")
