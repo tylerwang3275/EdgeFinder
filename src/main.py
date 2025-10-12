@@ -117,6 +117,18 @@ def create_app() -> FastAPI:
         """Health check endpoint."""
         return {"status": "healthy", "service": "edgefinder"}
     
+    @app.get("/debug")
+    async def debug_info():
+        """Debug endpoint to check environment variables."""
+        from src.config import load_config
+        config = load_config()
+        return {
+            "sports_filter": config.sports_filter,
+            "use_fixtures": config.use_fixtures,
+            "odds_api_key_set": bool(config.odds_api_key),
+            "timezone": config.timezone
+        }
+    
     @app.get("/api/latest", response_class=PlainTextResponse)
     async def get_latest_report():
         """Get the latest report."""
