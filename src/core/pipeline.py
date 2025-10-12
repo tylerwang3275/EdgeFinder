@@ -12,7 +12,7 @@ from src.core.odds_math import (
     american_to_implied_probability, calculate_discrepancy,
     calculate_edge_vs_best, calculate_payout_ratio, calculate_expected_value
 )
-from src.data.kalshi_client import KalshiClient
+from src.data.robinhood_client import RobinhoodClient
 from src.data.odds_client import OddsClient
 from src.data.mapping import (
     create_game_from_market, match_games_within_timeframe,
@@ -26,7 +26,7 @@ class EdgeFinderPipeline:
     
     def __init__(self, config: Config):
         self.config = config
-        self.kalshi_client = KalshiClient(config)
+        self.robinhood_client = RobinhoodClient(config)
         self.odds_client = OddsClient(config)
         self.logger = get_logger()
     
@@ -40,13 +40,13 @@ class EdgeFinderPipeline:
         self.logger.info("Starting EdgeFinder pipeline")
         
         # Fetch data
-        kalshi_markets = self.kalshi_client.get_markets()
+        robinhood_markets = self.robinhood_client.get_prediction_markets()
         sportsbook_odds = self.odds_client.get_odds()
         
-        self.logger.info(f"Fetched {len(kalshi_markets)} Kalshi markets and {len(sportsbook_odds)} sportsbook odds")
+        self.logger.info(f"Fetched {len(robinhood_markets)} Robinhood prediction markets and {len(sportsbook_odds)} sportsbook odds")
         
         # Process and match data
-        matched_games = self._match_and_process_data(kalshi_markets, sportsbook_odds)
+        matched_games = self._match_and_process_data(robinhood_markets, sportsbook_odds)
         
         self.logger.info(f"Matched {len(matched_games)} games")
         
@@ -63,7 +63,7 @@ class EdgeFinderPipeline:
             sections=self._create_sections(rankings),
             seattle_pick=seattle_pick,
             total_games=len(matched_games),
-            total_markets=len(kalshi_markets),
+            total_markets=len(robinhood_markets),
             total_books=len(sportsbook_odds)
         )
         
@@ -72,10 +72,10 @@ class EdgeFinderPipeline:
     
     def _match_and_process_data(
         self, 
-        kalshi_markets: List[KalshiMarket], 
+        robinhood_markets: List[KalshiMarket], 
         sportsbook_odds: List[SportsbookOdds]
     ) -> List[MatchedGame]:
-        """Match Kalshi markets with sportsbook odds and process."""
+        """Match Robinhood prediction markets with sportsbook odds and process."""
         matched_games = []
         
         # Group sportsbook odds by game
@@ -85,8 +85,8 @@ class EdgeFinderPipeline:
                 odds_by_game[odds.game_id] = []
             odds_by_game[odds.game_id].append(odds)
         
-        # Process each Kalshi market
-        for market in kalshi_markets:
+        # Process each Robinhood prediction market
+        for market in robinhood_markets:
             try:
                 # Create game from market
                 sport = self._infer_sport_from_market(market)
@@ -207,7 +207,7 @@ class EdgeFinderPipeline:
             
             return MatchedGame(
                 game=game,
-                kalshi_market=market,
+                kalshi_market=market,  # This is actually a Robinhood market now
                 sportsbook_odds=odds_list,
                 prediction_prob=prediction_prob,
                 book_probs=book_probs,
@@ -265,33 +265,33 @@ class EdgeFinderPipeline:
         """Create newsletter sections."""
         sections = []
         
-        # Biggest Discrepancies
+        # Best Robinhood Opportunities
         biggest_discrepancies = rankings[:self.config.top_n]
         sections.append(NewsletterSection(
-            title='Biggest Discrepancies',
-            description='Games with the largest differences between prediction markets and sportsbooks',
+            title='Best Robinhood Opportunities',
+            description='Games where Robinhood prediction markets differ most from sportsbooks',
             rankings=biggest_discrepancies
         ))
         
-        # Most Bet (by volume)
+        # Most Popular on Robinhood
         volume_rankings = sorted(rankings, key=lambda x: x.matched_game.volume, reverse=True)
         most_bet = volume_rankings[:self.config.top_n]
         sections.append(NewsletterSection(
-            title='Most Bet',
-            description='Games with the highest prediction market volume',
+            title='Most Popular on Robinhood',
+            description='Games with the highest Robinhood prediction market volume',
             rankings=most_bet
         ))
         
-        # Highest Payout Opportunities
+        # Highest Payout Potential on Robinhood
         payout_rankings = [
             r for r in rankings 
-            if r.matched_game.payout_ratio >= 3.0
+            if r.matched_game.payout_ratio >= 2.0  # Lower threshold for more opportunities
         ]
         payout_rankings.sort(key=lambda x: x.matched_game.volume, reverse=True)
         highest_payout = payout_rankings[:self.config.top_n]
         sections.append(NewsletterSection(
-            title='Highest Payout Opportunities',
-            description='Long-shot bets with significant market volume',
+            title='Highest Payout Potential on Robinhood',
+            description='Robinhood prediction markets with the best payout ratios',
             rankings=highest_payout
         ))
         

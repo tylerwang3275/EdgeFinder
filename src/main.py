@@ -132,14 +132,26 @@ def create_app() -> FastAPI:
             "timezone": config.timezone
         }
     
-    @app.get("/debug/kalshi")
-    async def debug_kalshi():
-        """Debug endpoint to test Kalshi API connection."""
+    @app.get("/debug/robinhood")
+    async def debug_robinhood():
+        """Debug endpoint to test Robinhood prediction markets."""
         from src.config import load_config
-        from src.data.kalshi_client import KalshiClient
+        from src.data.robinhood_client import RobinhoodClient
         config = load_config()
-        client = KalshiClient(config)
-        return client.test_connection()
+        client = RobinhoodClient(config)
+        
+        try:
+            markets = client.get_prediction_markets()
+            return {
+                "status": "success",
+                "markets_count": len(markets),
+                "sample_markets": [{"title": m.title, "yes_price": m.yes_price, "volume": m.volume} for m in markets[:3]]
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e)
+            }
     
     @app.get("/debug/odds")
     async def debug_odds():

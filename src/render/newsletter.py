@@ -20,12 +20,12 @@ class NewsletterRenderer:
         content = []
         
         # Header
-        content.append("# EdgeFinder: Sports vs Prediction Markets")
+        content.append("# EdgeFinder: Robinhood vs Sportsbooks")
         content.append("")
         content.append(f"**Generated:** {format_time_for_display(report.generated_at, self.timezone)}")
         content.append(f"**Timezone:** {report.timezone}")
         content.append("")
-        content.append(f"**Summary:** {report.total_games} matched games, {report.total_markets} markets, {report.total_books} book odds")
+        content.append(f"**Summary:** {report.total_games} matched games, {report.total_markets} Robinhood markets, {report.total_books} sportsbook odds")
         content.append("")
         
         # Sections
@@ -52,7 +52,7 @@ class NewsletterRenderer:
         # Footer
         content.append("---")
         content.append("")
-        content.append("*EdgeFinder analyzes discrepancies between prediction markets (Kalshi) and sportsbooks to identify potential edges.*")
+        content.append("*EdgeFinder analyzes discrepancies between Robinhood prediction markets and sportsbooks to identify the best betting opportunities on Robinhood.*")
         content.append("")
         content.append("**Disclaimer:** This is for informational purposes only. Sports betting involves risk.")
         
