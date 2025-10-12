@@ -126,7 +126,9 @@ def create_app() -> FastAPI:
             "sports_filter": config.sports_filter,
             "use_fixtures": config.use_fixtures,
             "odds_api_key_set": bool(config.odds_api_key),
-            "kalshi_api_key_set": bool(config.kalshi_api_key),
+            "kalshi_api_key_set": bool(config.kalshi_api_key_id and config.kalshi_private_key),
+            "kalshi_api_key_id_set": bool(config.kalshi_api_key_id),
+            "kalshi_private_key_set": bool(config.kalshi_private_key),
             "timezone": config.timezone
         }
     
@@ -138,6 +140,30 @@ def create_app() -> FastAPI:
         config = load_config()
         client = KalshiClient(config)
         return client.test_connection()
+    
+    @app.get("/debug/odds")
+    async def debug_odds():
+        """Debug endpoint to test sportsbook API connection."""
+        from src.config import load_config
+        from src.data.odds_client import OddsClient
+        config = load_config()
+        client = OddsClient(config)
+        
+        # Test fetching odds for one sport
+        try:
+            odds = client.get_odds("baseball_mlb")
+            return {
+                "status": "success",
+                "odds_count": len(odds),
+                "sample_odds": odds[0].__dict__ if odds else None,
+                "api_key_set": bool(config.odds_api_key)
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "api_key_set": bool(config.odds_api_key)
+            }
     
     @app.get("/api/latest", response_class=PlainTextResponse)
     async def get_latest_report():
