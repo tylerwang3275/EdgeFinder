@@ -249,6 +249,10 @@ def create_app() -> FastAPI:
         import requests
         from datetime import datetime
         import pytz
+        from src.config import load_config
+        
+        # Load config
+        config = load_config()
         
         # Get real NFL data
         url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
