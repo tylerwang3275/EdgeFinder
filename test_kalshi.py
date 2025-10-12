@@ -36,7 +36,7 @@ def test_kalshi_connection():
     
     try:
         # Test basic connection
-        url = "https://api.kalshi.com/markets"
+        url = "https://api.elections.kalshi.com/markets"
         params = {'limit': 1}
         
         print(f"🌐 Testing connection to: {url}")
@@ -66,7 +66,7 @@ def test_public_kalshi():
     
     try:
         # Try without authentication
-        url = "https://api.kalshi.com/markets"
+        url = "https://api.elections.kalshi.com/markets"
         params = {'limit': 1}
         
         response = requests.get(url, params=params, timeout=10)
