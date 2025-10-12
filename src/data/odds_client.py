@@ -44,10 +44,14 @@ class OddsClient:
         
         for sport in sports_list:
             try:
+                print(f"Fetching odds for sport: {sport}")
                 odds = self._fetch_sport_odds(sport, hours)
+                print(f"Successfully fetched {len(odds)} odds for {sport}")
                 all_odds.extend(odds)
             except Exception as e:
                 print(f"Error fetching odds for {sport}: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         return all_odds
@@ -63,10 +67,18 @@ class OddsClient:
             'dateFormat': 'iso'
         }
         
+        print(f"Making request to: {url}")
+        print(f"With params: {params}")
+        
         response = self.session.get(url, params=params, timeout=30)
-        response.raise_for_status()
+        print(f"Response status: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"API Error: {response.status_code} - {response.text}")
+            return []
         
         data = response.json()
+        print(f"Received {len(data)} games for {sport}")
         odds_list = []
         
         for game_data in data:
