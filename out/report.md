@@ -1,6 +1,6 @@
 # EdgeFinder: Sports vs Prediction Markets
 
-**Generated:** 2025-10-11 11:35 PM PDT
+**Generated:** 2025-10-12 12:47 AM PDT
 **Timezone:** America/Los_Angeles
 
 **Summary:** 0 matched games, 0 markets, 0 book odds
