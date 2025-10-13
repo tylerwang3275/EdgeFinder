@@ -126,12 +126,10 @@ class EdgeFinderApp {
             }
         }
 
-        console.log('Parsed data:', { summary, discrepancies, mostBet, seattlePick });
         this.displayData({ summary, discrepancies, mostBet, seattlePick });
     }
 
     displayData(data) {
-        console.log('Displaying data:', data);
         this.updateSummary(data.summary);
         this.updateDiscrepanciesTable(data.discrepancies);
         this.updateMostBetTable(data.mostBet);
@@ -234,7 +232,8 @@ class EdgeFinderApp {
     }
 
     getDiscrepancyClass(discrepancy) {
-        const value = parseFloat(discrepancy);
+        // Remove % sign and convert to decimal
+        const value = parseFloat(discrepancy.replace('%', '')) / 100;
         if (value >= 0.1) return 'high';
         if (value >= 0.05) return 'medium';
         return 'low';
