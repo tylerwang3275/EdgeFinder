@@ -119,31 +119,49 @@ class RobinhoodClient:
         # Create some realistic fixture markets
         fixtures = [
             {
-                "home_team": "Seattle Seahawks",
-                "away_team": "Jacksonville Jaguars",
+                "home_team": "San Francisco 49ers",
+                "away_team": "Seattle Seahawks",
                 "sport": "americanfootball_nfl",
-                "start_time": now + timedelta(hours=2),
-                "home_robinhood_prob": 0.45,  # Slightly different from sportsbooks
-                "away_robinhood_prob": 0.55,
+                "start_time": now + timedelta(hours=6),  # Sunday afternoon NFL
+                "home_robinhood_prob": 0.58,  # Slightly different from sportsbooks
+                "away_robinhood_prob": 0.42,
                 "volume": 2500
             },
             {
-                "home_team": "Seattle Mariners",
-                "away_team": "Toronto Blue Jays",
-                "sport": "baseball_mlb",
-                "start_time": now + timedelta(hours=12),
-                "home_robinhood_prob": 0.38,
-                "away_robinhood_prob": 0.62,
+                "home_team": "Philadelphia Eagles",
+                "away_team": "Dallas Cowboys",
+                "sport": "americanfootball_nfl",
+                "start_time": now + timedelta(hours=9),  # Sunday night NFL
+                "home_robinhood_prob": 0.52,
+                "away_robinhood_prob": 0.48,
+                "volume": 3200
+            },
+            {
+                "home_team": "Golden State Warriors",
+                "away_team": "Los Angeles Lakers",
+                "sport": "basketball_nba",
+                "start_time": now + timedelta(hours=12),  # NBA preseason
+                "home_robinhood_prob": 0.55,  # Different from sportsbooks
+                "away_robinhood_prob": 0.45,
                 "volume": 1800
             },
             {
-                "home_team": "Los Angeles Lakers",
-                "away_team": "Denver Nuggets",
-                "sport": "basketball_nba",
-                "start_time": now + timedelta(hours=24),
-                "home_robinhood_prob": 0.65,  # Different from sportsbooks
-                "away_robinhood_prob": 0.35,
-                "volume": 3200
+                "home_team": "Vancouver Canucks",
+                "away_team": "Seattle Kraken",
+                "sport": "icehockey_nhl",
+                "start_time": now + timedelta(hours=24),  # NHL regular season
+                "home_robinhood_prob": 0.48,
+                "away_robinhood_prob": 0.52,
+                "volume": 1500
+            },
+            {
+                "home_team": "New York Yankees",
+                "away_team": "Houston Astros",
+                "sport": "baseball_mlb",
+                "start_time": now + timedelta(hours=18),  # MLB playoffs
+                "home_robinhood_prob": 0.62,
+                "away_robinhood_prob": 0.38,
+                "volume": 2200
             }
         ]
         
