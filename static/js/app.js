@@ -72,18 +72,15 @@ class EdgeFinderApp {
             
             if (line.startsWith('## 🏠 Seattle Games')) {
                 currentSection = 'seattle';
-                console.log('Found Seattle section');
                 continue;
             } else if (line.startsWith('## 📊 Robinhood vs Sportsbooks Comparison')) {
                 currentSection = 'comparison';
-                console.log('Found comparison section');
                 continue;
             }
 
             // Parse table rows
             if (line.startsWith('|') && line.includes('|') && !line.includes('---')) {
                 const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
-                console.log('Parsing row:', cells.length, 'cells:', cells);
                 if (cells.length >= 12 && cells[0] !== 'Rank') {
                     const gameData = {
                         rank: cells[0],
@@ -129,10 +126,12 @@ class EdgeFinderApp {
             }
         }
 
+        console.log('Parsed data:', { summary, discrepancies, mostBet, seattlePick });
         this.displayData({ summary, discrepancies, mostBet, seattlePick });
     }
 
     displayData(data) {
+        console.log('Displaying data:', data);
         this.updateSummary(data.summary);
         this.updateDiscrepanciesTable(data.discrepancies);
         this.updateMostBetTable(data.mostBet);
