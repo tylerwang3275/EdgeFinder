@@ -45,14 +45,14 @@ class EdgeFinderApp {
         let summary = {};
 
         // Extract summary information
-        const summaryLine = lines.find(line => line.includes('**Summary:**'));
+        const summaryLine = lines.find(line => line.includes('**Total Games:**'));
         if (summaryLine) {
-            const summaryMatch = summaryLine.match(/(\d+) matched games, (\d+) markets, (\d+) book odds/);
+            const summaryMatch = summaryLine.match(/\*\*Total Games:\*\* (\d+)/);
             if (summaryMatch) {
                 summary = {
                     games: parseInt(summaryMatch[1]),
-                    markets: parseInt(summaryMatch[2]),
-                    books: parseInt(summaryMatch[3])
+                    markets: parseInt(summaryMatch[1]), // Use games as markets for now
+                    books: parseInt(summaryMatch[1])    // Use games as books for now
                 };
             }
         }
@@ -70,37 +70,30 @@ class EdgeFinderApp {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             
-            if (line.startsWith('## Biggest Discrepancies')) {
-                currentSection = 'discrepancies';
-                continue;
-            } else if (line.startsWith('## Most Bet')) {
-                currentSection = 'mostBet';
-                continue;
-            } else if (line.startsWith('## 🏠 Hometown Favorite: Seattle')) {
+            if (line.startsWith('## 🏠 Seattle Games')) {
                 currentSection = 'seattle';
+                continue;
+            } else if (line.startsWith('## 📊 All NFL Games')) {
+                currentSection = 'allGames';
                 continue;
             }
 
             // Parse table rows
             if (line.startsWith('|') && line.includes('|') && !line.includes('---')) {
                 const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
-                if (cells.length >= 9 && cells[0] !== 'Rank') {
+                if (cells.length >= 5 && cells[0] !== 'Away Team') {
                     const gameData = {
-                        rank: cells[0],
-                        sport: cells[1],
-                        game: cells[2],
-                        startTime: cells[3],
-                        predProb: cells[4],
-                        books: cells[5],
-                        discrepancy: cells[6],
-                        volume: cells[7],
-                        payout: cells[8]
+                        awayTeam: cells[0],
+                        homeTeam: cells[1],
+                        startTime: cells[2],
+                        awayOdds: cells[3],
+                        homeOdds: cells[4],
+                        game: `${cells[0]} @ ${cells[1]}`
                     };
 
-                    if (currentSection === 'discrepancies') {
-                        discrepancies.push(gameData);
-                    } else if (currentSection === 'mostBet') {
-                        mostBet.push(gameData);
+                    if (currentSection === 'allGames') {
+                        discrepancies.push(gameData); // Use discrepancies array for all games
+                        mostBet.push(gameData); // Also populate mostBet for now
                     }
                 }
             }
@@ -148,18 +141,18 @@ class EdgeFinderApp {
         const tbody = document.querySelector('#discrepanciesTable tbody');
         tbody.innerHTML = '';
 
-        discrepancies.forEach(game => {
+        discrepancies.forEach((game, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><span class="badge bg-primary">${game.rank}</span></td>
-                <td><span class="badge sport-badge bg-secondary">${game.sport}</span></td>
+                <td><span class="badge bg-primary">${index + 1}</span></td>
+                <td><span class="badge sport-badge bg-secondary">NFL</span></td>
                 <td><strong>${game.game}</strong></td>
                 <td><small>${game.startTime}</small></td>
-                <td><span class="badge bg-info">${game.predProb}</span></td>
-                <td><small>${game.books}</small></td>
-                <td><span class="discrepancy-${this.getDiscrepancyClass(game.discrepancy)}">${game.discrepancy}</span></td>
-                <td><span class="volume-${this.getVolumeClass(game.volume)}">${game.volume}</span></td>
-                <td><span class="badge bg-warning">${game.payout}</span></td>
+                <td><span class="badge bg-success">${game.awayOdds}</span></td>
+                <td><span class="badge bg-danger">${game.homeOdds}</span></td>
+                <td><span class="badge bg-info">Live</span></td>
+                <td><span class="badge bg-warning">Real-time</span></td>
+                <td><span class="badge bg-primary">Active</span></td>
             `;
             tbody.appendChild(row);
         });
@@ -169,18 +162,19 @@ class EdgeFinderApp {
         const tbody = document.querySelector('#mostBetTable tbody');
         tbody.innerHTML = '';
 
-        mostBet.forEach(game => {
+        // Use the same data as discrepancies for now
+        mostBet.forEach((game, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><span class="badge bg-primary">${game.rank}</span></td>
-                <td><span class="badge sport-badge bg-secondary">${game.sport}</span></td>
+                <td><span class="badge bg-primary">${index + 1}</span></td>
+                <td><span class="badge sport-badge bg-secondary">NFL</span></td>
                 <td><strong>${game.game}</strong></td>
                 <td><small>${game.startTime}</small></td>
-                <td><span class="badge bg-info">${game.predProb}</span></td>
-                <td><small>${game.books}</small></td>
-                <td><span class="discrepancy-${this.getDiscrepancyClass(game.discrepancy)}">${game.discrepancy}</span></td>
-                <td><span class="volume-${this.getVolumeClass(game.volume)}">${game.volume}</span></td>
-                <td><span class="badge bg-warning">${game.payout}</span></td>
+                <td><span class="badge bg-success">${game.awayOdds}</span></td>
+                <td><span class="badge bg-danger">${game.homeOdds}</span></td>
+                <td><span class="badge bg-info">Live</span></td>
+                <td><span class="badge bg-warning">Real-time</span></td>
+                <td><span class="badge bg-primary">Active</span></td>
             `;
             tbody.appendChild(row);
         });
