@@ -73,27 +73,33 @@ class EdgeFinderApp {
             if (line.startsWith('## 🏠 Seattle Games')) {
                 currentSection = 'seattle';
                 continue;
-            } else if (line.startsWith('## 📊 All NFL Games')) {
-                currentSection = 'allGames';
+            } else if (line.startsWith('## 📊 Robinhood vs Sportsbooks Comparison')) {
+                currentSection = 'comparison';
                 continue;
             }
 
             // Parse table rows
             if (line.startsWith('|') && line.includes('|') && !line.includes('---')) {
                 const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
-                if (cells.length >= 5 && cells[0] !== 'Away Team') {
+                if (cells.length >= 13 && cells[0] !== 'Rank') {
                     const gameData = {
-                        awayTeam: cells[0],
-                        homeTeam: cells[1],
-                        startTime: cells[2],
-                        awayOdds: cells[3],
-                        homeOdds: cells[4],
-                        game: `${cells[0]} @ ${cells[1]}`
+                        rank: cells[0],
+                        sport: cells[1],
+                        game: cells[2],
+                        time: cells[3],
+                        robinhoodAway: cells[4],
+                        sportsbookAway: cells[5],
+                        awayPayout: cells[6],
+                        robinhoodHome: cells[7],
+                        sportsbookHome: cells[8],
+                        homePayout: cells[9],
+                        volume: cells[10],
+                        discrepancy: cells[11]
                     };
 
-                    if (currentSection === 'allGames') {
-                        discrepancies.push(gameData); // Use discrepancies array for all games
-                        mostBet.push(gameData); // Also populate mostBet for now
+                    if (currentSection === 'comparison') {
+                        discrepancies.push(gameData);
+                        mostBet.push(gameData); // Use same data for both tables
                     }
                 }
             }
@@ -141,18 +147,21 @@ class EdgeFinderApp {
         const tbody = document.querySelector('#discrepanciesTable tbody');
         tbody.innerHTML = '';
 
-        discrepancies.forEach((game, index) => {
+        discrepancies.forEach((game) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><span class="badge bg-primary">${index + 1}</span></td>
-                <td><span class="badge sport-badge bg-secondary">NFL</span></td>
+                <td><span class="badge bg-primary">${game.rank}</span></td>
+                <td><span class="badge sport-badge bg-secondary">${game.sport}</span></td>
                 <td><strong>${game.game}</strong></td>
-                <td><small>${game.startTime}</small></td>
-                <td><span class="badge bg-success">${game.awayOdds}</span></td>
-                <td><span class="badge bg-danger">${game.homeOdds}</span></td>
-                <td><span class="badge bg-info">Live</span></td>
-                <td><span class="badge bg-warning">Real-time</span></td>
-                <td><span class="badge bg-primary">Active</span></td>
+                <td><small>${game.time}</small></td>
+                <td><span class="badge bg-info">${game.robinhoodAway}</span></td>
+                <td><span class="badge bg-success">${game.sportsbookAway}</span></td>
+                <td><span class="badge bg-warning">${game.awayPayout}</span></td>
+                <td><span class="badge bg-info">${game.robinhoodHome}</span></td>
+                <td><span class="badge bg-danger">${game.sportsbookHome}</span></td>
+                <td><span class="badge bg-warning">${game.homePayout}</span></td>
+                <td><span class="badge bg-secondary">${game.volume}</span></td>
+                <td><span class="discrepancy-${this.getDiscrepancyClass(game.discrepancy)}">${game.discrepancy}</span></td>
             `;
             tbody.appendChild(row);
         });
@@ -162,19 +171,28 @@ class EdgeFinderApp {
         const tbody = document.querySelector('#mostBetTable tbody');
         tbody.innerHTML = '';
 
-        // Use the same data as discrepancies for now
-        mostBet.forEach((game, index) => {
+        // Sort by volume (highest first) for most bet table
+        const sortedByVolume = [...mostBet].sort((a, b) => {
+            const volumeA = parseInt(a.volume.replace(/,/g, ''));
+            const volumeB = parseInt(b.volume.replace(/,/g, ''));
+            return volumeB - volumeA;
+        });
+
+        sortedByVolume.forEach((game, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><span class="badge bg-primary">${index + 1}</span></td>
-                <td><span class="badge sport-badge bg-secondary">NFL</span></td>
+                <td><span class="badge sport-badge bg-secondary">${game.sport}</span></td>
                 <td><strong>${game.game}</strong></td>
-                <td><small>${game.startTime}</small></td>
-                <td><span class="badge bg-success">${game.awayOdds}</span></td>
-                <td><span class="badge bg-danger">${game.homeOdds}</span></td>
-                <td><span class="badge bg-info">Live</span></td>
-                <td><span class="badge bg-warning">Real-time</span></td>
-                <td><span class="badge bg-primary">Active</span></td>
+                <td><small>${game.time}</small></td>
+                <td><span class="badge bg-info">${game.robinhoodAway}</span></td>
+                <td><span class="badge bg-success">${game.sportsbookAway}</span></td>
+                <td><span class="badge bg-warning">${game.awayPayout}</span></td>
+                <td><span class="badge bg-info">${game.robinhoodHome}</span></td>
+                <td><span class="badge bg-danger">${game.sportsbookHome}</span></td>
+                <td><span class="badge bg-warning">${game.homePayout}</span></td>
+                <td><span class="badge bg-secondary">${game.volume}</span></td>
+                <td><span class="discrepancy-${this.getDiscrepancyClass(game.discrepancy)}">${game.discrepancy}</span></td>
             `;
             tbody.appendChild(row);
         });
