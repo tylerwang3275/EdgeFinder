@@ -1,0 +1,9 @@
+[
+  {
+    "email": "test@example.com",
+    "location": "Seattle, WA",
+    "subscribed_at": "2025-10-13T05:33:10.724904",
+    "is_active": true,
+    "last_email_sent": null
+  }
+]

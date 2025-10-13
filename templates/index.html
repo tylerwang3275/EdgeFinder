@@ -28,6 +28,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/health">Health</a>
                     </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#newsletterModal">
+                            <i class="fas fa-envelope me-1"></i>Newsletter
+                        </button>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -206,6 +211,65 @@
         <footer class="text-center text-muted py-4">
             <p>&copy; 2024 EdgeFinder. For informational purposes only. Sports betting involves risk.</p>
         </footer>
+    </div>
+
+    <!-- Newsletter Signup Modal -->
+    <div class="modal fade" id="newsletterModal" tabindex="-1" aria-labelledby="newsletterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="newsletterModalLabel">
+                        <i class="fas fa-envelope me-2"></i>Get Weekly EdgeFinder Reports
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                        <h4>Stay Ahead of the Game</h4>
+                        <p class="text-muted">Get weekly reports with the best Robinhood opportunities, most popular picks, biggest payouts, and your hometown favorites!</p>
+                    </div>
+                    
+                    <form id="newsletterForm">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" required placeholder="your@email.com">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Your Hometown (for personalized picks)</label>
+                            <input type="text" class="form-control" id="location" name="location" required placeholder="e.g., Seattle, WA">
+                            <div class="form-text">We'll find the best local team opportunities for you!</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    I agree to receive weekly EdgeFinder reports and understand this is for informational purposes only.
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Subscribe to Weekly Reports
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="newsletterSuccess" class="alert alert-success d-none mt-3">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Success!</strong> You're now subscribed to weekly EdgeFinder reports. Check your email for confirmation.
+                    </div>
+                    
+                    <div id="newsletterError" class="alert alert-danger d-none mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error!</strong> <span id="newsletterErrorMessage"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -366,6 +366,95 @@ def create_app() -> FastAPI:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
     
+    # Newsletter endpoints
+    @app.post("/api/newsletter/subscribe")
+    async def subscribe_newsletter(request: Request):
+        """Subscribe to the newsletter."""
+        try:
+            from src.models.newsletter import NewsletterData
+            
+            data = await request.json()
+            email = data.get('email')
+            location = data.get('location')
+            terms = data.get('terms')
+            
+            if not email or not location or not terms:
+                raise HTTPException(status_code=400, detail="Email, location, and terms agreement are required")
+            
+            # Validate email format
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                raise HTTPException(status_code=400, detail="Invalid email format")
+            
+            # Add subscription
+            newsletter_data = NewsletterData()
+            success = newsletter_data.add_subscription(email, location)
+            
+            if success:
+                return {"message": "Successfully subscribed to newsletter", "email": email}
+            else:
+                raise HTTPException(status_code=409, detail="Email already subscribed")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to subscribe: {str(e)}")
+    
+    @app.get("/api/newsletter/subscribers")
+    async def get_subscribers():
+        """Get all newsletter subscribers (admin endpoint)."""
+        try:
+            from src.models.newsletter import NewsletterData
+            
+            newsletter_data = NewsletterData()
+            subscribers = newsletter_data.get_active_subscriptions()
+            
+            return {
+                "total_subscribers": len(subscribers),
+                "subscribers": [
+                    {
+                        "email": sub.email,
+                        "location": sub.location,
+                        "subscribed_at": sub.subscribed_at.isoformat(),
+                        "last_email_sent": sub.last_email_sent.isoformat() if sub.last_email_sent else None
+                    }
+                    for sub in subscribers
+                ]
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get subscribers: {str(e)}")
+    
+    @app.post("/api/newsletter/send")
+    async def send_weekly_newsletters():
+        """Send weekly newsletters to all subscribers (admin endpoint)."""
+        try:
+            from src.services.newsletter_generator import NewsletterGenerator
+            
+            generator = NewsletterGenerator()
+            result = generator.send_weekly_newsletters()
+            
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to send newsletters: {str(e)}")
+    
+    @app.get("/api/newsletter/preview")
+    async def preview_newsletter():
+        """Preview the weekly newsletter content."""
+        try:
+            from src.services.newsletter_generator import NewsletterGenerator
+            
+            generator = NewsletterGenerator()
+            report_data = generator.generate_weekly_report()
+            
+            return {
+                "status": "success",
+                "report_data": report_data,
+                "preview_note": "This is a preview of the weekly newsletter content"
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
+    
     @app.post("/api/refresh")
     async def refresh_latest_report():
         """Force refresh the latest report with new data."""

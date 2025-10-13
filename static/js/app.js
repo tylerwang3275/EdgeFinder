@@ -301,7 +301,73 @@ function downloadCSV() {
     window.open('/api/csv', '_blank');
 }
 
+// Newsletter functionality
+function setupNewsletterSignup() {
+    const form = document.getElementById('newsletterForm');
+    const successAlert = document.getElementById('newsletterSuccess');
+    const errorAlert = document.getElementById('newsletterError');
+    const errorMessage = document.getElementById('newsletterErrorMessage');
+    
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const email = formData.get('email');
+            const location = formData.get('location');
+            const terms = formData.get('terms');
+            
+            // Hide previous alerts
+            successAlert.classList.add('d-none');
+            errorAlert.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/api/newsletter/subscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        location: location,
+                        terms: terms
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    successAlert.classList.remove('d-none');
+                    form.reset();
+                    // Auto-hide modal after 3 seconds
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('newsletterModal'));
+                        if (modal) modal.hide();
+                    }, 3000);
+                } else {
+                    errorMessage.textContent = result.detail || 'An error occurred. Please try again.';
+                    errorAlert.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Network error. Please check your connection and try again.';
+                errorAlert.classList.remove('d-none');
+            }
+        });
+    }
+}
+
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.edgeFinderApp = new EdgeFinderApp();
+    setupNewsletterSignup();
+    
+    // Show newsletter modal after 10 seconds if not already shown
+    setTimeout(() => {
+        const modal = new bootstrap.Modal(document.getElementById('newsletterModal'));
+        const hasShownModal = localStorage.getItem('edgefinder_newsletter_shown');
+        if (!hasShownModal) {
+            modal.show();
+            localStorage.setItem('edgefinder_newsletter_shown', 'true');
+        }
+    }, 10000);
 });
