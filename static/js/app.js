@@ -35,48 +35,78 @@ class EdgeFinderApp {
         }
     }
 
-    parseAndDisplayData(markdownData) {
-        // Parse the markdown data to extract information
-        const lines = markdownData.split('\n');
-        let currentSection = '';
-        let discrepancies = [];
-        let mostBet = [];
-        let seattlePick = null;
-        let summary = {};
+           parseAndDisplayData(markdownData) {
+               // Parse the markdown data to extract information
+               const lines = markdownData.split('\n');
+               let currentSection = '';
+               let discrepancies = [];
+               let mostBet = [];
+               let seattlePick = null;
+               let summary = {};
+               let sportsSummary = {};
 
-        // Extract summary information
-        const summaryLine = lines.find(line => line.includes('**Total Games:**'));
-        if (summaryLine) {
-            const summaryMatch = summaryLine.match(/\*\*Total Games:\*\* (\d+)/);
-            if (summaryMatch) {
-                summary = {
-                    games: parseInt(summaryMatch[1]),
-                    markets: parseInt(summaryMatch[1]), // Use games as markets for now
-                    books: parseInt(summaryMatch[1])    // Use games as books for now
-                };
-            }
-        }
+               // Extract summary information
+               const summaryLine = lines.find(line => line.includes('**Total Games:**'));
+               if (summaryLine) {
+                   const summaryMatch = summaryLine.match(/\*\*Total Games:\*\* (\d+)/);
+                   if (summaryMatch) {
+                       summary = {
+                           games: parseInt(summaryMatch[1]),
+                           markets: parseInt(summaryMatch[1]), // Use games as markets for now
+                           books: parseInt(summaryMatch[1])    // Use games as books for now
+                       };
+                   }
+               }
 
-        // Extract last updated time
-        const timeLine = lines.find(line => line.includes('**Generated:**'));
-        if (timeLine) {
-            const timeMatch = timeLine.match(/\*\*Generated:\*\* (.+)/);
-            if (timeMatch) {
-                summary.lastUpdated = timeMatch[1];
-            }
-        }
+               // Extract last updated time
+               const timeLine = lines.find(line => line.includes('**Generated:**'));
+               if (timeLine) {
+                   const timeMatch = timeLine.match(/\*\*Generated:\*\* (.+)/);
+                   if (timeMatch) {
+                       summary.lastUpdated = timeMatch[1];
+                   }
+               }
 
-        // Parse sections
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            
-            if (line.startsWith('## 🏠 Seattle Games')) {
-                currentSection = 'seattle';
-                continue;
-            } else if (line.startsWith('## 📊 Robinhood vs Sportsbooks Comparison')) {
-                currentSection = 'comparison';
-                continue;
-            }
+               // Parse sections
+               for (let i = 0; i < lines.length; i++) {
+                   const line = lines[i];
+                   
+                   if (line.startsWith('## 🏆 Sports Summary')) {
+                       currentSection = 'sports_summary';
+                       continue;
+                   } else if (line.startsWith('## 🏠 Seattle Games')) {
+                       currentSection = 'seattle';
+                       continue;
+                   } else if (line.startsWith('## 📊 Robinhood vs Sportsbooks Comparison')) {
+                       currentSection = 'comparison';
+                       continue;
+                   }
+
+                   // Parse sports summary
+                   if (currentSection === 'sports_summary' && line.startsWith('### ')) {
+                       const sportName = line.replace('### ', '');
+                       sportsSummary[sportName] = {
+                           name: sportName,
+                           games: [],
+                           totalGames: 0
+                       };
+                   } else if (currentSection === 'sports_summary' && line.includes('**Games Available:**')) {
+                       const gamesMatch = line.match(/\*\*Games Available:\*\* (\d+)/);
+                       if (gamesMatch && Object.keys(sportsSummary).length > 0) {
+                           const lastSport = Object.keys(sportsSummary)[Object.keys(sportsSummary).length - 1];
+                           sportsSummary[lastSport].totalGames = parseInt(gamesMatch[1]);
+                       }
+                   } else if (currentSection === 'sports_summary' && line.startsWith('- ')) {
+                       const gameMatch = line.match(/- (.+?) \((.+?)\) - (.+?) discrepancy/);
+                       if (gameMatch && Object.keys(sportsSummary).length > 0) {
+                           const lastSport = Object.keys(sportsSummary)[Object.keys(sportsSummary).length - 1];
+                           sportsSummary[lastSport].games.push({
+                               game: gameMatch[1],
+                               time: gameMatch[2],
+                               discrepancy: gameMatch[3]
+                           });
+                       }
+                   }
 
             // Parse table rows
             if (line.startsWith('|') && line.includes('|') && !line.includes('---')) {
@@ -126,11 +156,12 @@ class EdgeFinderApp {
             }
         }
 
-        this.displayData({ summary, discrepancies, mostBet, seattlePick });
+               this.displayData({ summary, discrepancies, mostBet, seattlePick, sportsSummary });
     }
 
     displayData(data) {
         this.updateSummary(data.summary);
+        this.updateSportsSummary(data.sportsSummary);
         this.updateDiscrepanciesTable(data.discrepancies);
         this.updateMostBetTable(data.mostBet);
         this.updateSeattlePick(data.seattlePick);
@@ -141,6 +172,54 @@ class EdgeFinderApp {
         document.getElementById('totalMarkets').textContent = summary.markets || '-';
         document.getElementById('totalBooks').textContent = summary.books || '-';
         document.getElementById('lastUpdated').textContent = summary.lastUpdated || '-';
+    }
+
+    updateSportsSummary(sportsSummary) {
+        const container = document.getElementById('sportsSummary');
+        if (!container) return;
+
+        if (!sportsSummary || Object.keys(sportsSummary).length === 0) {
+            container.innerHTML = '<p>No sports data available.</p>';
+            return;
+        }
+
+        let html = '<div class="row">';
+        
+        Object.values(sportsSummary).forEach(sport => {
+            html += `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0">${sport.name}</h6>
+                            <small class="text-muted">${sport.totalGames} games available</small>
+                        </div>
+                        <div class="card-body">
+            `;
+            
+            if (sport.games && sport.games.length > 0) {
+                html += '<ul class="list-unstyled mb-0">';
+                sport.games.forEach(game => {
+                    html += `
+                        <li class="mb-1">
+                            <small><strong>${game.game}</strong></small><br>
+                            <small class="text-muted">${game.time} - ${game.discrepancy} discrepancy</small>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted mb-0">No games available</p>';
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     updateDiscrepanciesTable(discrepancies) {

@@ -97,7 +97,7 @@ def create_app() -> FastAPI:
                # Load config
                config = load_config()
                
-               # Define sports to fetch
+               # Define sports to fetch with more games per sport
                sports = [
                    ('americanfootball_nfl', 'NFL'),
                    ('americanfootball_ncaaf', 'College Football'),
@@ -108,6 +108,7 @@ def create_app() -> FastAPI:
                
                all_games_data = []
                seattle_games = []
+               sport_summaries = {}
                
                # Fetch data for each sport
                for sport_key, sport_name in sports:
@@ -129,6 +130,12 @@ def create_app() -> FastAPI:
                            # Process games for this sport
                            sport_games = process_sport_games(data, sport_name, config)
                            all_games_data.extend(sport_games)
+                           
+                           # Store sport summary
+                           sport_summaries[sport_name] = {
+                               'total_games': len(sport_games),
+                               'games': sport_games[:5]  # Top 5 games per sport
+                           }
                            
                            # Check for Seattle games
                            for game in sport_games:
@@ -155,6 +162,19 @@ def create_app() -> FastAPI:
                report.append(f"**Total Games:** {len(all_games_data)}")
                report.append("")
                
+               # Add sport summaries
+               report.append("## 🏆 Sports Summary")
+               report.append("")
+               for sport_name, summary in sport_summaries.items():
+                   report.append(f"### {sport_name}")
+                   report.append(f"**Games Available:** {summary['total_games']}")
+                   if summary['games']:
+                       report.append("**Top Games:**")
+                       for game in summary['games']:
+                           max_discrepancy = max(game['away_discrepancy'], game['home_discrepancy'])
+                           report.append(f"- {game['game']} ({game['time']}) - {max_discrepancy:.1%} discrepancy")
+                   report.append("")
+               
                # Sort by discrepancy (highest first)
                all_games_data.sort(key=lambda x: max(x['away_discrepancy'], x['home_discrepancy']), reverse=True)
                
@@ -164,7 +184,7 @@ def create_app() -> FastAPI:
                    report.append("")
                    for game in seattle_games:
                        report.append(f"**{game['game']}**")
-                       report.append(f"*{game['time']}*")
+                       report.append(f"*{game['time']} - {game['sport']}*")
                        report.append("")
                        report.append(f"- **Robinhood {game['away_team']}:** {game['robinhood_away_prob']:.1%} ({game['away_payout']:.1f}x payout)")
                        report.append(f"- **Sportsbook {game['away_team']}:** {game['sportsbook_away_odds']:+d}")
@@ -181,7 +201,7 @@ def create_app() -> FastAPI:
                report.append("| Rank | Sport | Game | Time | Robinhood Away | Sportsbook Away | Away Payout | Robinhood Home | Sportsbook Home | Home Payout | Volume | Discrepancy |")
                report.append("|------|-------|------|------|----------------|-----------------|-------------|----------------|-----------------|-------------|--------|-------------|")
                
-               for i, game in enumerate(all_games_data[:20], 1):  # Show top 20 games
+               for i, game in enumerate(all_games_data[:30], 1):  # Show top 30 games
                    max_discrepancy = max(game['away_discrepancy'], game['home_discrepancy'])
                    report.append(
                        f"| {i} | {game['sport']} | {game['game']} | {game['time']} | "
@@ -206,7 +226,7 @@ def create_app() -> FastAPI:
                tz = pytz.timezone(config.timezone)
                games_data = []
                
-               for game in data[:10]:  # Process first 10 games per sport
+               for game in data[:15]:  # Process first 15 games per sport
                    home_team = game.get('home_team', '')
                    away_team = game.get('away_team', '')
                    commence_time = game.get('commence_time', '')
