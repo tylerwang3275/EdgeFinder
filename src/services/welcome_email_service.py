@@ -49,6 +49,12 @@ class WelcomeEmailService:
             # Send email
             if not self.sender_email or not self.sender_password:
                 print("⚠️ Email credentials not configured. Skipping welcome email send.")
+                print("💡 To enable welcome emails, configure SMTP environment variables on Render:")
+                print("   SMTP_SERVER=smtp.gmail.com")
+                print("   SMTP_PORT=587")
+                print("   SENDER_EMAIL=edgefindernews@gmail.com")
+                print("   SENDER_PASSWORD=ufzn fneg awxz jivh")
+                print("   SENDER_NAME=EdgeFinder")
                 return False
             
             context = ssl.create_default_context()

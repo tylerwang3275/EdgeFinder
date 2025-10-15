@@ -343,19 +343,29 @@ def create_app() -> FastAPI:
             success = newsletter_data.add_subscription(email, location)
             
             if success:
-                # Send welcome email immediately
+                # Send welcome email in background (non-blocking)
                 try:
-                    welcome_service = WelcomeEmailService()
-                    welcome_sent = welcome_service.send_welcome_email(email, location)
-                    if welcome_sent:
-                        print(f"✅ Welcome email sent to {email}")
-                    else:
-                        print(f"⚠️ Welcome email failed for {email}")
+                    import threading
+                    def send_welcome_email_async():
+                        try:
+                            welcome_service = WelcomeEmailService()
+                            welcome_sent = welcome_service.send_welcome_email(email, location)
+                            if welcome_sent:
+                                print(f"✅ Welcome email sent to {email}")
+                            else:
+                                print(f"⚠️ Welcome email failed for {email}")
+                        except Exception as e:
+                            print(f"❌ Error sending welcome email to {email}: {e}")
+                    
+                    # Start email sending in background thread
+                    email_thread = threading.Thread(target=send_welcome_email_async)
+                    email_thread.daemon = True
+                    email_thread.start()
+                    
                 except Exception as e:
-                    print(f"❌ Error sending welcome email to {email}: {e}")
-                    # Don't fail the subscription if welcome email fails
+                    print(f"❌ Error starting welcome email thread for {email}: {e}")
                 
-                return {"message": "Successfully subscribed to newsletter", "email": email, "welcome_sent": True}
+                return {"message": "Successfully subscribed to newsletter", "email": email, "welcome_sent": "processing"}
             else:
                 raise HTTPException(status_code=409, detail="Email already subscribed")
                 
@@ -400,6 +410,44 @@ def create_app() -> FastAPI:
             return result
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to send newsletters: {str(e)}")
+    
+    @app.get("/api/newsletter/test-email")
+    async def test_email_system():
+        """Test if email system is configured (admin endpoint)."""
+        try:
+            from src.services.welcome_email_service import WelcomeEmailService
+            
+            service = WelcomeEmailService()
+            
+            # Check if credentials are configured
+            if not service.sender_email or not service.sender_password:
+                return {
+                    "status": "not_configured",
+                    "message": "Email credentials not configured",
+                    "instructions": "Add SMTP environment variables to Render deployment",
+                    "required_vars": [
+                        "SMTP_SERVER=smtp.gmail.com",
+                        "SMTP_PORT=587", 
+                        "SENDER_EMAIL=edgefindernews@gmail.com",
+                        "SENDER_PASSWORD=ufzn fneg awxz jivh",
+                        "SENDER_NAME=EdgeFinder"
+                    ]
+                }
+            
+            return {
+                "status": "configured",
+                "message": "Email system is configured",
+                "smtp_server": service.smtp_server,
+                "smtp_port": service.smtp_port,
+                "sender_email": service.sender_email,
+                "sender_name": service.sender_name
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Error checking email configuration: {str(e)}"
+            }
     
     @app.get("/api/newsletter/preview")
     async def preview_newsletter():
