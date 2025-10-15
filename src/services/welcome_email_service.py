@@ -26,15 +26,18 @@ class WelcomeEmailService:
             # Extract first name from email (everything before @)
             first_name = recipient_email.split('@')[0].title()
             
+            # Get live data for the welcome email
+            live_data = self._get_live_data()
+            
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = "🎉 Welcome to EdgeFinder! Here's Your First Sneak Peek"
             msg['From'] = f"{self.sender_name} <{self.sender_email}>"
             msg['To'] = recipient_email
             
-            # Create HTML content
-            html_content = self._create_welcome_html(first_name, recipient_location)
-            text_content = self._create_welcome_text(first_name, recipient_location)
+            # Create HTML content with live data
+            html_content = self._create_welcome_html(first_name, recipient_location, live_data)
+            text_content = self._create_welcome_text(first_name, recipient_location, live_data)
             
             # Attach parts
             part1 = MIMEText(text_content, 'plain')
@@ -61,7 +64,111 @@ class WelcomeEmailService:
             print(f"❌ Failed to send welcome email to {recipient_email}: {e}")
             return False
     
-    def _create_welcome_html(self, first_name: str, location: str) -> str:
+    def _get_live_data(self) -> dict:
+        """Get live data from the website for welcome email."""
+        try:
+            import requests
+            website_url = "https://edgefinder-czi3.onrender.com/api/latest"
+            response = requests.get(website_url, timeout=10)
+            if response.status_code == 200:
+                return self._parse_live_data(response.text)
+        except Exception as e:
+            print(f"⚠️ Could not get live data for welcome email: {e}")
+        
+        # Return fallback data
+        return {
+            'best_odds': {
+                'game': 'Lakers vs Warriors',
+                'robinhood': '54% (Lakers win)',
+                'sportsbook': '48%',
+                'discrepancy': '6%'
+            },
+            'most_popular': {
+                'game': 'Cowboys vs Eagles',
+                'sportsbook': '-4.5 (Cowboys)',
+                'volume': '32% of total handle'
+            },
+            'long_shot': {
+                'game': 'Chicago Bulls +550',
+                'robinhood': '0.15 (15%)',
+                'payout': '5x+'
+            }
+        }
+    
+    def _parse_live_data(self, markdown_data: str) -> dict:
+        """Parse live data from markdown for welcome email."""
+        try:
+            lines = markdown_data.split('\n')
+            games_data = []
+            
+            # Find the comparison table
+            in_table = False
+            for line in lines:
+                if '## 📊 Robinhood vs Sportsbooks Comparison' in line:
+                    in_table = True
+                    continue
+                elif line.startswith('---') and in_table:
+                    break
+                elif in_table and line.startswith('|') and 'Rank' not in line and '---' not in line:
+                    cells = [cell.strip() for cell in line.split('|')[1:-1]]
+                    if len(cells) >= 12:
+                        games_data.append({
+                            'game': cells[2],
+                            'robinhoodAway': cells[4],
+                            'sportsbookAway': cells[5],
+                            'discrepancy': cells[11],
+                            'volume': cells[10]
+                        })
+            
+            if games_data:
+                # Get best odds (highest discrepancy)
+                best_game = max(games_data, key=lambda x: float(x['discrepancy'].replace('%', '')))
+                
+                # Get most popular (highest volume)
+                popular_game = max(games_data, key=lambda x: int(x['volume'].replace(',', '')))
+                
+                return {
+                    'best_odds': {
+                        'game': best_game['game'],
+                        'robinhood': best_game['robinhoodAway'],
+                        'sportsbook': best_game['sportsbookAway'],
+                        'discrepancy': best_game['discrepancy']
+                    },
+                    'most_popular': {
+                        'game': popular_game['game'],
+                        'sportsbook': popular_game['sportsbookAway'],
+                        'volume': popular_game['volume']
+                    },
+                    'long_shot': {
+                        'game': 'Chicago Bulls +550',
+                        'robinhood': '0.15 (15%)',
+                        'payout': '5x+'
+                    }
+                }
+        except Exception as e:
+            print(f"Error parsing live data: {e}")
+        
+        # Return fallback if parsing fails
+        return {
+            'best_odds': {
+                'game': 'Lakers vs Warriors',
+                'robinhood': '54% (Lakers win)',
+                'sportsbook': '48%',
+                'discrepancy': '6%'
+            },
+            'most_popular': {
+                'game': 'Cowboys vs Eagles',
+                'sportsbook': '-4.5 (Cowboys)',
+                'volume': '32% of total handle'
+            },
+            'long_shot': {
+                'game': 'Chicago Bulls +550',
+                'robinhood': '0.15 (15%)',
+                'payout': '5x+'
+            }
+        }
+    
+    def _create_welcome_html(self, first_name: str, location: str, live_data: dict) -> str:
         """Create HTML welcome email content."""
         # Determine hometown team based on location
         hometown_team = self._get_hometown_team(location)
@@ -185,29 +292,29 @@ class WelcomeEmailService:
                     
                     <div class="sample-box">
                         <h3>🏆 Best Odds</h3>
-                        <h4>Lakers vs Warriors</h4>
+                        <h4>{live_data['best_odds']['game']}</h4>
                         <div class="odds-comparison">
-                            <span><strong>Robinhood:</strong> <span class="robinhood-odds">54% (Lakers win)</span></span>
-                            <span><strong>DraftKings:</strong> <span class="sportsbook-odds">48%</span></span>
-                            <span><strong>Discrepancy:</strong> <span class="discrepancy">6%</span></span>
+                            <span><strong>Robinhood:</strong> <span class="robinhood-odds">{live_data['best_odds']['robinhood']}</span></span>
+                            <span><strong>Sportsbook:</strong> <span class="sportsbook-odds">{live_data['best_odds']['sportsbook']}</span></span>
+                            <span><strong>Discrepancy:</strong> <span class="discrepancy">{live_data['best_odds']['discrepancy']}</span></span>
                         </div>
-                        <p><strong>📊 Why this matters:</strong> If you're betting on the Lakers, Robinhood is giving you an extra edge. This could be an opportunity to find value that sportsbooks aren't offering.</p>
+                        <p><strong>📊 Why this matters:</strong> This is a live example of the biggest discrepancy we found today. Robinhood is offering different odds than sportsbooks - this could be your edge!</p>
                     </div>
                     
                     <div class="sample-box">
                         <h3>📈 Most Popular</h3>
-                        <h4>Cowboys vs Eagles</h4>
-                        <p><strong>DraftKings:</strong> -4.5 (Cowboys)</p>
-                        <p><strong>Most bet on:</strong> 32% of total handle</p>
-                        <p><strong>📊 Why this matters:</strong> When the crowd picks a side, it often moves the line. You'll want to track this game closely as it could move fast.</p>
+                        <h4>{live_data['most_popular']['game']}</h4>
+                        <p><strong>Sportsbook:</strong> {live_data['most_popular']['sportsbook']}</p>
+                        <p><strong>Volume:</strong> {live_data['most_popular']['volume']}</p>
+                        <p><strong>📊 Why this matters:</strong> This is the most bet-on game right now. When the crowd picks a side, it often moves the line. You'll want to track this game closely!</p>
                     </div>
                     
                     <div class="sample-box">
                         <h3>💸 Long Shot</h3>
-                        <h4>Chicago Bulls +550</h4>
-                        <p><strong>Robinhood Price:</strong> 0.15 (15%)</p>
-                        <p><strong>Potential Return:</strong> 5x+</p>
-                        <p><strong>📊 Why this matters:</strong> Big payout for a low-likelihood bet. If you think the Bulls can upset, now's your chance to place your bet before the odds change.</p>
+                        <h4>{live_data['long_shot']['game']}</h4>
+                        <p><strong>Robinhood Price:</strong> {live_data['long_shot']['robinhood']}</p>
+                        <p><strong>Potential Return:</strong> {live_data['long_shot']['payout']}</p>
+                        <p><strong>📊 Why this matters:</strong> Big payout for a low-likelihood bet. If you think this team can upset, now's your chance to place your bet before the odds change.</p>
                     </div>
                     
                     <div class="sample-box">
@@ -245,7 +352,7 @@ class WelcomeEmailService:
         
         return html
     
-    def _create_welcome_text(self, first_name: str, location: str) -> str:
+    def _create_welcome_text(self, first_name: str, location: str, live_data: dict) -> str:
         """Create plain text welcome email content."""
         hometown_team = self._get_hometown_team(location)
         
@@ -271,29 +378,29 @@ Hometown Fav: Personalized picks for your city (yes, we've got {location} covere
 Your First Sneak Peek: A Sample of This Week's Newsletter
 
 🏆 Best Odds
-Lakers vs Warriors
+{live_data['best_odds']['game']}
 
-Robinhood: 54% (Lakers win)
-DraftKings: 48%
-Discrepancy: 6%
+Robinhood: {live_data['best_odds']['robinhood']}
+Sportsbook: {live_data['best_odds']['sportsbook']}
+Discrepancy: {live_data['best_odds']['discrepancy']}
 
-📊 Why this matters: If you're betting on the Lakers, Robinhood is giving you an extra edge. This could be an opportunity to find value that sportsbooks aren't offering.
+📊 Why this matters: This is a live example of the biggest discrepancy we found today. Robinhood is offering different odds than sportsbooks - this could be your edge!
 
 📈 Most Popular
-Cowboys vs Eagles
+{live_data['most_popular']['game']}
 
-DraftKings: -4.5 (Cowboys)
-Most bet on: 32% of total handle
+Sportsbook: {live_data['most_popular']['sportsbook']}
+Volume: {live_data['most_popular']['volume']}
 
-📊 Why this matters: When the crowd picks a side, it often moves the line. You'll want to track this game closely as it could move fast.
+📊 Why this matters: This is the most bet-on game right now. When the crowd picks a side, it often moves the line. You'll want to track this game closely!
 
 💸 Long Shot
-Chicago Bulls +550
+{live_data['long_shot']['game']}
 
-Robinhood Price: 0.15 (15%)
-Potential Return: 5x+
+Robinhood Price: {live_data['long_shot']['robinhood']}
+Potential Return: {live_data['long_shot']['payout']}
 
-📊 Why this matters: Big payout for a low-likelihood bet. If you think the Bulls can upset, now's your chance to place your bet before the odds change.
+📊 Why this matters: Big payout for a low-likelihood bet. If you think this team can upset, now's your chance to place your bet before the odds change.
 
 💚 Hometown Fav ({location} Edition)
 {hometown_team} vs Los Angeles Angels

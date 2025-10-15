@@ -21,9 +21,20 @@ class NewsletterGenerator:
         self.email_service = EmailService()
     
     def generate_weekly_report(self) -> Dict[str, Any]:
-        """Generate the weekly report data."""
+        """Generate the weekly report data using live data from the website."""
         try:
-            # Get real NFL data
+            # First try to get data from our own website API
+            try:
+                website_url = "https://edgefinder-czi3.onrender.com/api/latest"
+                response = requests.get(website_url, timeout=15)
+                if response.status_code == 200:
+                    print("✅ Using live data from website")
+                    return self._parse_website_data(response.text)
+            except Exception as e:
+                print(f"⚠️ Website data unavailable: {e}")
+            
+            # Fallback to direct API call
+            print("🔄 Falling back to direct API call")
             url = f"{self.config.odds_api_base_url}/sports/americanfootball_nfl/odds"
             params = {
                 'apiKey': self.config.odds_api_key,
@@ -156,6 +167,73 @@ class NewsletterGenerator:
             
         except Exception as e:
             print(f"❌ Error generating report: {e}")
+            return self._get_fallback_data()
+    
+    def _parse_website_data(self, markdown_data: str) -> Dict[str, Any]:
+        """Parse live data from the website's markdown report."""
+        try:
+            lines = markdown_data.split('\n')
+            games_data = []
+            seattle_games = []
+            
+            # Find the comparison table
+            in_table = False
+            for line in lines:
+                if '## 📊 Robinhood vs Sportsbooks Comparison' in line:
+                    in_table = True
+                    continue
+                elif line.startswith('---') and in_table:
+                    break
+                elif in_table and line.startswith('|') and 'Rank' not in line and '---' not in line:
+                    # Parse table row
+                    cells = [cell.strip() for cell in line.split('|')[1:-1]]  # Remove empty first/last
+                    if len(cells) >= 12:
+                        try:
+                            game_data = {
+                                'game': cells[2],
+                                'time': cells[3],
+                                'sport': cells[1],
+                                'robinhoodAway': cells[4],
+                                'sportsbookAway': cells[5],
+                                'awayPayout': cells[6],
+                                'robinhoodHome': cells[7],
+                                'sportsbookHome': cells[8],
+                                'homePayout': cells[9],
+                                'volume': cells[10],
+                                'discrepancy': cells[11],
+                                'awayDiscrepancy': float(cells[11].replace('%', '')) / 100,
+                                'homeDiscrepancy': float(cells[11].replace('%', '')) / 100
+                            }
+                            games_data.append(game_data)
+                            
+                            # Check for Seattle games
+                            if 'seattle' in cells[2].lower():
+                                seattle_games.append(game_data)
+                        except Exception as e:
+                            print(f"Error parsing table row: {e}")
+                            continue
+            
+            # Sort by discrepancy for best opportunities
+            best_opportunities = sorted(games_data, key=lambda x: x['awayDiscrepancy'], reverse=True)
+            
+            # Sort by volume for most popular
+            most_popular = sorted(games_data, key=lambda x: int(x['volume'].replace(',', '')), reverse=True)
+            
+            # Get hometown pick
+            hometown_pick = seattle_games[0] if seattle_games else games_data[0] if games_data else None
+            
+            return {
+                'total_games': len(games_data),
+                'total_markets': len(games_data),
+                'total_books': len(games_data),
+                'best_opportunities': best_opportunities,
+                'most_popular': most_popular,
+                'hometown_pick': hometown_pick,
+                'generated_at': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"❌ Error parsing website data: {e}")
             return self._get_fallback_data()
     
     def _get_fallback_data(self) -> Dict[str, Any]:
