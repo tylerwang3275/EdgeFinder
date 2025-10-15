@@ -86,106 +86,268 @@ def create_app() -> FastAPI:
     templates = Jinja2Templates(directory="templates")
     
     # Enhanced report generation function with Robinhood vs Sportsbook comparison
-    def generate_simple_real_report():
-        """Generate a comprehensive report comparing Robinhood prediction markets vs sportsbook odds."""
-        import requests
-        from datetime import datetime
-        import pytz
-        import random
-        from src.config import load_config
-        
-        # Load config
-        config = load_config()
-        
-        # Get real NFL data
-        url = f"{config.odds_api_base_url}/sports/americanfootball_nfl/odds"
-        params = {
-            'apiKey': config.odds_api_key,
-            'regions': 'us',
-            'markets': 'h2h',
-            'oddsFormat': 'american',
-            'dateFormat': 'iso'
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        if response.status_code != 200:
-            return f"# EdgeFinder: Robinhood vs Sportsbooks\n\n❌ API Error: {response.status_code}\n\n"
-        
-        data = response.json()
-        tz = pytz.timezone(config.timezone)
-        now = datetime.now(tz)
-        
-        # Generate report
-        report = []
-        report.append("# EdgeFinder: Robinhood vs Sportsbooks")
-        report.append("")
-        report.append(f"**Generated:** {now.strftime('%Y-%m-%d %I:%M %p %Z')}")
-        report.append(f"**Total Games:** {len(data)}")
-        report.append("")
-        
-        # Process games and create Robinhood vs Sportsbook comparison
-        comparison_data = []
-        seattle_games = []
-        
-        for game in data[:15]:  # Process first 15 games
-            home_team = game.get('home_team', '')
-            away_team = game.get('away_team', '')
-            commence_time = game.get('commence_time', '')
-            
-            # Parse time
-            try:
-                game_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
-                game_time_local = game_time.astimezone(tz)
-                time_str = game_time_local.strftime('%m/%d %I:%M %p')
-            except:
-                time_str = commence_time[:16]
-            
-            # Get best sportsbook odds
-            bookmakers = game.get('bookmakers', [])
-            best_away_odds = None
-            best_home_odds = None
-            total_books = len(bookmakers)
-            
-            if bookmakers:
-                for book in bookmakers:
-                    for market in book.get('markets', []):
-                        if market.get('key') == 'h2h':
-                            for outcome in market.get('outcomes', []):
-                                if outcome.get('name') == away_team:
-                                    price = outcome.get('price')
-                                    if best_away_odds is None or price > best_away_odds:
-                                        best_away_odds = price
-                                elif outcome.get('name') == home_team:
-                                    price = outcome.get('price')
-                                    if best_home_odds is None or price > best_home_odds:
-                                        best_home_odds = price
-            
-            if best_away_odds and best_home_odds:
-                # Convert sportsbook odds to implied probabilities
-                def american_to_prob(odds):
-                    if odds > 0:
-                        return 100 / (odds + 100)
-                    else:
-                        return abs(odds) / (abs(odds) + 100)
-                
-                away_prob = american_to_prob(best_away_odds)
-                home_prob = american_to_prob(best_home_odds)
-                
-                # Simulate Robinhood prediction market odds (with some inefficiency)
-                robinhood_away_prob = away_prob + random.uniform(-0.05, 0.05)
-                robinhood_home_prob = home_prob + random.uniform(-0.05, 0.05)
-                
-                # Ensure probabilities stay within bounds
-                robinhood_away_prob = max(0.01, min(0.99, robinhood_away_prob))
-                robinhood_home_prob = max(0.01, min(0.99, robinhood_home_prob))
-                
-                # Calculate payout ratios
-                away_payout = 1 / robinhood_away_prob
-                home_payout = 1 / robinhood_home_prob
-                
-                # Calculate discrepancy
-                away_discrepancy = abs(robinhood_away_prob - away_prob)
-                home_discrepancy = abs(robinhood_home_prob - home_prob)
+           def generate_simple_real_report():
+               """Generate a comprehensive report comparing Robinhood prediction markets vs sportsbook odds across multiple sports."""
+               import requests
+               from datetime import datetime
+               import pytz
+               import random
+               from src.config import load_config
+               
+               # Load config
+               config = load_config()
+               
+               # Define sports to fetch
+               sports = [
+                   ('americanfootball_nfl', 'NFL'),
+                   ('americanfootball_ncaaf', 'College Football'),
+                   ('basketball_nba', 'NBA'),
+                   ('soccer_epl', 'Premier League'),
+                   ('baseball_mlb', 'MLB')
+               ]
+               
+               all_games_data = []
+               seattle_games = []
+               
+               # Fetch data for each sport
+               for sport_key, sport_name in sports:
+                   try:
+                       url = f"{config.odds_api_base_url}/sports/{sport_key}/odds"
+                       params = {
+                           'apiKey': config.odds_api_key,
+                           'regions': 'us',
+                           'markets': 'h2h',
+                           'oddsFormat': 'american',
+                           'dateFormat': 'iso'
+                       }
+                       
+                       response = requests.get(url, params=params, timeout=10)
+                       if response.status_code == 200:
+                           data = response.json()
+                           print(f"✅ Fetched {len(data)} {sport_name} games")
+                           
+                           # Process games for this sport
+                           sport_games = process_sport_games(data, sport_name, config)
+                           all_games_data.extend(sport_games)
+                           
+                           # Check for Seattle games
+                           for game in sport_games:
+                               if 'seattle' in game.get('game', '').lower():
+                                   seattle_games.append(game)
+                       else:
+                           print(f"❌ Failed to fetch {sport_name}: {response.status_code}")
+                           
+                   except Exception as e:
+                       print(f"❌ Error fetching {sport_name}: {e}")
+                       continue
+               
+               if not all_games_data:
+                   return f"# EdgeFinder: Robinhood vs Sportsbooks\n\n❌ No games data available\n\n"
+               
+               tz = pytz.timezone(config.timezone)
+               now = datetime.now(tz)
+               
+               # Generate report
+               report = []
+               report.append("# EdgeFinder: Robinhood vs Sportsbooks")
+               report.append("")
+               report.append(f"**Generated:** {now.strftime('%Y-%m-%d %I:%M %p %Z')}")
+               report.append(f"**Total Games:** {len(all_games_data)}")
+               report.append("")
+               
+               # Sort by discrepancy (highest first)
+               all_games_data.sort(key=lambda x: max(x['away_discrepancy'], x['home_discrepancy']), reverse=True)
+               
+               # Add Seattle section
+               if seattle_games:
+                   report.append("## 🏠 Seattle Games")
+                   report.append("")
+                   for game in seattle_games:
+                       report.append(f"**{game['game']}**")
+                       report.append(f"*{game['time']}*")
+                       report.append("")
+                       report.append(f"- **Robinhood {game['away_team']}:** {game['robinhood_away_prob']:.1%} ({game['away_payout']:.1f}x payout)")
+                       report.append(f"- **Sportsbook {game['away_team']}:** {game['sportsbook_away_odds']:+d}")
+                       report.append(f"- **Discrepancy:** {game['away_discrepancy']:.1%}")
+                       report.append("")
+                       report.append(f"- **Robinhood {game['home_team']}:** {game['robinhood_home_prob']:.1%} ({game['home_payout']:.1f}x payout)")
+                       report.append(f"- **Sportsbook {game['home_team']}:** {game['sportsbook_home_odds']:+d}")
+                       report.append(f"- **Discrepancy:** {game['home_discrepancy']:.1%}")
+                       report.append("")
+               
+               # Add main comparison table
+               report.append("## 📊 Robinhood vs Sportsbooks Comparison")
+               report.append("")
+               report.append("| Rank | Sport | Game | Time | Robinhood Away | Sportsbook Away | Away Payout | Robinhood Home | Sportsbook Home | Home Payout | Volume | Discrepancy |")
+               report.append("|------|-------|------|------|----------------|-----------------|-------------|----------------|-----------------|-------------|--------|-------------|")
+               
+               for i, game in enumerate(all_games_data[:20], 1):  # Show top 20 games
+                   max_discrepancy = max(game['away_discrepancy'], game['home_discrepancy'])
+                   report.append(
+                       f"| {i} | {game['sport']} | {game['game']} | {game['time']} | "
+                       f"{game['robinhood_away_prob']:.1%} | {game['sportsbook_away_odds']:+d} | {game['away_payout']:.1f}x | "
+                       f"{game['robinhood_home_prob']:.1%} | {game['sportsbook_home_odds']:+d} | {game['home_payout']:.1f}x | "
+                       f"{game['volume']:,} | {max_discrepancy:.1%} |"
+                   )
+               
+               report.append("")
+               report.append("---")
+               report.append("")
+               report.append("*Real-time data from TheOddsAPI and simulated Robinhood prediction markets*")
+               
+               return "\n".join(report)
+           
+           def process_sport_games(data, sport_name, config):
+               """Process games for a specific sport."""
+               import pytz
+               from datetime import datetime
+               import random
+               
+               tz = pytz.timezone(config.timezone)
+               games_data = []
+               
+               for game in data[:10]:  # Process first 10 games per sport
+                   home_team = game.get('home_team', '')
+                   away_team = game.get('away_team', '')
+                   commence_time = game.get('commence_time', '')
+                   
+                   # Parse time
+                   try:
+                       game_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+                       game_time_local = game_time.astimezone(tz)
+                       time_str = game_time_local.strftime('%m/%d %I:%M %p')
+                   except:
+                       time_str = commence_time[:16]
+                   
+                   # Get best sportsbook odds
+                   bookmakers = game.get('bookmakers', [])
+                   best_away_odds = None
+                   best_home_odds = None
+                   total_books = len(bookmakers)
+                   
+                   if bookmakers:
+                       for book in bookmakers:
+                           for market in book.get('markets', []):
+                               if market.get('key') == 'h2h':
+                                   for outcome in market.get('outcomes', []):
+                                       if outcome.get('name') == away_team:
+                                           price = outcome.get('price')
+                                           if best_away_odds is None or price > best_away_odds:
+                                               best_away_odds = price
+                                       elif outcome.get('name') == home_team:
+                                           price = outcome.get('price')
+                                           if best_home_odds is None or price > best_home_odds:
+                                               best_home_odds = price
+                   
+                   if best_away_odds and best_home_odds:
+                       # Convert sportsbook odds to implied probabilities
+                       def american_to_prob(odds):
+                           if odds > 0:
+                               return 100 / (odds + 100)
+                           else:
+                               return abs(odds) / (abs(odds) + 100)
+                       
+                       away_prob = american_to_prob(best_away_odds)
+                       home_prob = american_to_prob(best_home_odds)
+                       
+                       # Simulate Robinhood prediction market odds (with some inefficiency)
+                       robinhood_away_prob = away_prob + random.uniform(-0.05, 0.05)
+                       robinhood_home_prob = home_prob + random.uniform(-0.05, 0.05)
+                       
+                       # Ensure probabilities stay within bounds
+                       robinhood_away_prob = max(0.01, min(0.99, robinhood_away_prob))
+                       robinhood_home_prob = max(0.01, min(0.99, robinhood_home_prob))
+                       
+                       # Calculate payout ratios
+                       away_payout = 1 / robinhood_away_prob
+                       home_payout = 1 / robinhood_home_prob
+                       
+                       # Calculate discrepancy
+                       away_discrepancy = abs(robinhood_away_prob - away_prob)
+                       home_discrepancy = abs(robinhood_home_prob - home_prob)
+                       
+                       # Simulate volume
+                       volume = random.randint(500, 5000)
+                       
+                       # Create game data
+                       game_data = {
+                           'game': f"{away_team} @ {home_team}",
+                           'time': time_str,
+                           'sport': sport_name,
+                           'away_team': away_team,
+                           'home_team': home_team,
+                           'robinhood_away_prob': robinhood_away_prob,
+                           'robinhood_home_prob': robinhood_home_prob,
+                           'sportsbook_away_odds': best_away_odds,
+                           'sportsbook_home_odds': best_home_odds,
+                           'away_payout': away_payout,
+                           'home_payout': home_payout,
+                           'away_discrepancy': away_discrepancy,
+                           'home_discrepancy': home_discrepancy,
+                           'volume': volume,
+                           'total_books': total_books
+                       }
+                       
+                       games_data.append(game_data)
+               
+               return games_data
+           
+           @app.get("/", response_class=HTMLResponse)
+           async def home(request: Request):
+               """Serve the main web interface."""
+               return templates.TemplateResponse("index.html", {"request": request})
+           
+           # Newsletter endpoints
+           @app.post("/api/newsletter/subscribe")
+           async def subscribe_newsletter(request: Request):
+               """Subscribe to the newsletter."""
+               try:
+                   from src.models.newsletter import NewsletterData
+                   from src.services.welcome_email_service import WelcomeEmailService
+                   
+                   data = await request.json()
+                   email = data.get('email')
+                   location = data.get('location')
+                   terms = data.get('terms')
+                   
+                   if not email or not location or not terms:
+                       raise HTTPException(status_code=400, detail="Email, location, and terms agreement are required")
+                   
+                   # Validate email format
+                   import re
+                   email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                   if not re.match(email_pattern, email):
+                       raise HTTPException(status_code=400, detail="Invalid email format")
+                   
+                   # Add subscription
+                   newsletter_data = NewsletterData()
+                   success = newsletter_data.add_subscription(email, location)
+                   
+                   if success:
+                       # Send welcome email immediately
+                       try:
+                           welcome_service = WelcomeEmailService()
+                           welcome_sent = welcome_service.send_welcome_email(email, location)
+                           if welcome_sent:
+                               print(f"✅ Welcome email sent to {email}")
+                           else:
+                               print(f"⚠️ Welcome email failed for {email}")
+                       except Exception as e:
+                           print(f"❌ Error sending welcome email to {email}: {e}")
+                           # Don't fail the subscription if welcome email fails
+                       
+                       return {"message": "Successfully subscribed to newsletter", "email": email, "welcome_sent": True}
+                   else:
+                       raise HTTPException(status_code=409, detail="Email already subscribed")
+                       
+               except HTTPException:
+                   raise
+               except Exception as e:
+                   raise HTTPException(status_code=500, detail=f"Failed to subscribe: {str(e)}")
+           
+           @app.get("/api/newsletter/subscribers")
+           async def get_subscribers():
+               """Get all newsletter subscribers (admin endpoint)."""
                 
                 # Simulate volume
                 volume = random.randint(500, 5000)
