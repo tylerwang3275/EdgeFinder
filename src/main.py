@@ -462,14 +462,14 @@ def create_app() -> FastAPI:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="EdgeFinder: Sports vs Prediction Markets Analysis")
-    parser.add_argument("--mode", choices=["cli", "web"], default="web", help="Run mode")
+    parser.add_argument("command", nargs="?", choices=["serve", "cli"], default="serve", help="Command to run")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     
     args = parser.parse_args()
     
-    if args.mode == "cli":
+    if args.command == "cli":
         run_pipeline()
     else:
         # Setup logging
