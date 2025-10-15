@@ -372,6 +372,7 @@ def create_app() -> FastAPI:
         """Subscribe to the newsletter."""
         try:
             from src.models.newsletter import NewsletterData
+            from src.services.welcome_email_service import WelcomeEmailService
             
             data = await request.json()
             email = data.get('email')
@@ -392,7 +393,19 @@ def create_app() -> FastAPI:
             success = newsletter_data.add_subscription(email, location)
             
             if success:
-                return {"message": "Successfully subscribed to newsletter", "email": email}
+                # Send welcome email immediately
+                try:
+                    welcome_service = WelcomeEmailService()
+                    welcome_sent = welcome_service.send_welcome_email(email, location)
+                    if welcome_sent:
+                        print(f"✅ Welcome email sent to {email}")
+                    else:
+                        print(f"⚠️ Welcome email failed for {email}")
+                except Exception as e:
+                    print(f"❌ Error sending welcome email to {email}: {e}")
+                    # Don't fail the subscription if welcome email fails
+                
+                return {"message": "Successfully subscribed to newsletter", "email": email, "welcome_sent": True}
             else:
                 raise HTTPException(status_code=409, detail="Email already subscribed")
                 

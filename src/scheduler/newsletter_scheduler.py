@@ -34,14 +34,16 @@ class NewsletterScheduler:
     
     def start_scheduler(self):
         """Start the newsletter scheduler."""
-        # Schedule weekly newsletter for every Monday at 9:00 AM
+        # Schedule newsletter for Monday, Thursday, and Saturday at 9:00 AM
         schedule.every().monday.at("09:00").do(self.send_weekly_newsletter)
+        schedule.every().thursday.at("09:00").do(self.send_weekly_newsletter)
+        schedule.every().saturday.at("09:00").do(self.send_weekly_newsletter)
         
         # Also schedule for testing - every day at 2:00 PM (remove this in production)
         schedule.every().day.at("14:00").do(self.send_weekly_newsletter)
         
         self.logger.info("Newsletter scheduler started")
-        self.logger.info("Weekly newsletter scheduled for Mondays at 9:00 AM")
+        self.logger.info("Newsletter scheduled for Monday, Thursday, and Saturday at 9:00 AM")
         self.logger.info("Test newsletter scheduled for daily at 2:00 PM")
         
         # Run scheduler
