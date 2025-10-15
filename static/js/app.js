@@ -303,23 +303,70 @@ function downloadCSV() {
 
 // Newsletter functionality
 function setupNewsletterSignup() {
-    const form = document.getElementById('newsletterForm');
-    const successAlert = document.getElementById('newsletterSuccess');
-    const errorAlert = document.getElementById('newsletterError');
-    const errorMessage = document.getElementById('newsletterErrorMessage');
+    // Top newsletter form
+    const topForm = document.getElementById('topNewsletterForm');
+    const topSuccessAlert = document.getElementById('topNewsletterSuccess');
+    const topErrorAlert = document.getElementById('topNewsletterError');
+    const topErrorMessage = document.getElementById('topNewsletterErrorMessage');
     
-    if (form) {
-        form.addEventListener('submit', async (e) => {
+    if (topForm) {
+        topForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = new FormData(form);
+            const email = document.getElementById('topEmail').value;
+            const location = document.getElementById('topLocation').value;
+            
+            // Hide previous alerts
+            topSuccessAlert.classList.add('d-none');
+            topErrorAlert.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/api/newsletter/subscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        location: location,
+                        terms: true // Auto-accept terms for top form
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    topSuccessAlert.classList.remove('d-none');
+                    topForm.reset();
+                } else {
+                    topErrorMessage.textContent = result.detail || 'An error occurred. Please try again.';
+                    topErrorAlert.classList.remove('d-none');
+                }
+            } catch (error) {
+                topErrorMessage.textContent = 'Network error. Please check your connection and try again.';
+                topErrorAlert.classList.remove('d-none');
+            }
+        });
+    }
+    
+    // Modal newsletter form (if it exists)
+    const modalForm = document.getElementById('newsletterForm');
+    const modalSuccessAlert = document.getElementById('newsletterSuccess');
+    const modalErrorAlert = document.getElementById('newsletterError');
+    const modalErrorMessage = document.getElementById('newsletterErrorMessage');
+    
+    if (modalForm) {
+        modalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(modalForm);
             const email = formData.get('email');
             const location = formData.get('location');
             const terms = formData.get('terms');
             
             // Hide previous alerts
-            successAlert.classList.add('d-none');
-            errorAlert.classList.add('d-none');
+            modalSuccessAlert.classList.add('d-none');
+            modalErrorAlert.classList.add('d-none');
             
             try {
                 const response = await fetch('/api/newsletter/subscribe', {
@@ -337,20 +384,20 @@ function setupNewsletterSignup() {
                 const result = await response.json();
                 
                 if (response.ok) {
-                    successAlert.classList.remove('d-none');
-                    form.reset();
+                    modalSuccessAlert.classList.remove('d-none');
+                    modalForm.reset();
                     // Auto-hide modal after 3 seconds
                     setTimeout(() => {
                         const modal = bootstrap.Modal.getInstance(document.getElementById('newsletterModal'));
                         if (modal) modal.hide();
                     }, 3000);
                 } else {
-                    errorMessage.textContent = result.detail || 'An error occurred. Please try again.';
-                    errorAlert.classList.remove('d-none');
+                    modalErrorMessage.textContent = result.detail || 'An error occurred. Please try again.';
+                    modalErrorAlert.classList.remove('d-none');
                 }
             } catch (error) {
-                errorMessage.textContent = 'Network error. Please check your connection and try again.';
-                errorAlert.classList.remove('d-none');
+                modalErrorMessage.textContent = 'Network error. Please check your connection and try again.';
+                modalErrorAlert.classList.remove('d-none');
             }
         });
     }
@@ -360,14 +407,4 @@ function setupNewsletterSignup() {
 document.addEventListener('DOMContentLoaded', () => {
     window.edgeFinderApp = new EdgeFinderApp();
     setupNewsletterSignup();
-    
-    // Show newsletter modal after 10 seconds if not already shown
-    setTimeout(() => {
-        const modal = new bootstrap.Modal(document.getElementById('newsletterModal'));
-        const hasShownModal = localStorage.getItem('edgefinder_newsletter_shown');
-        if (!hasShownModal) {
-            modal.show();
-            localStorage.setItem('edgefinder_newsletter_shown', 'true');
-        }
-    }, 10000);
 });

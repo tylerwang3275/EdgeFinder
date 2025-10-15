@@ -6,10 +6,94 @@
     <title>EdgeFinder - Sports vs Prediction Markets</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+            border-bottom: 2px solid #00ff88;
+        }
+        .card {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            color: #ffffff;
+        }
+        .card-header {
+            background-color: #2d2d2d;
+            border-bottom: 1px solid #333333;
+        }
+        .table {
+            color: #ffffff;
+        }
+        .table-dark {
+            --bs-table-bg: #1a1a1a;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            border: none;
+            color: #000000;
+            font-weight: bold;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #00cc6a 0%, #00ff88 100%);
+            color: #000000;
+        }
+        .btn-outline-primary {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+        .btn-outline-primary:hover {
+            background-color: #00ff88;
+            color: #000000;
+        }
+        .text-primary {
+            color: #00ff88 !important;
+        }
+        .bg-primary {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%) !important;
+        }
+        .newsletter-signup {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .form-control {
+            background-color: #2d2d2d;
+            border: 1px solid #555555;
+            color: #ffffff;
+        }
+        .form-control:focus {
+            background-color: #2d2d2d;
+            border-color: #00ff88;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 255, 136, 0.25);
+        }
+        .form-control::placeholder {
+            color: #888888;
+        }
+        .badge {
+            background-color: #00ff88;
+            color: #000000;
+        }
+        .alert-success {
+            background-color: #1a4d1a;
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+        .alert-danger {
+            background-color: #4d1a1a;
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="fas fa-chart-line me-2"></i>EdgeFinder
@@ -28,32 +112,60 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/health">Health</a>
                     </li>
-                    <li class="nav-item">
-                        <button class="btn btn-outline-light btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#newsletterModal">
-                            <i class="fas fa-envelope me-1"></i>Newsletter
-                        </button>
-                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
+        <!-- Newsletter Signup Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="newsletter-signup">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2">
+                                <i class="fas fa-envelope me-2"></i>Get Weekly EdgeFinder Reports
+                            </h4>
+                            <p class="mb-0 text-muted">Best Robinhood opportunities, most popular picks, biggest payouts, and hometown favorites!</p>
+                        </div>
+                        <div class="col-md-4">
+                            <form id="topNewsletterForm" class="d-flex gap-2">
+                                <input type="email" class="form-control form-control-sm" id="topEmail" placeholder="Your email" required>
+                                <input type="text" class="form-control form-control-sm" id="topLocation" placeholder="City, State" required>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id="topNewsletterSuccess" class="alert alert-success d-none mt-2 mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Successfully subscribed! Check your email for confirmation.
+                    </div>
+                    <div id="topNewsletterError" class="alert alert-danger d-none mt-2 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i><span id="topNewsletterErrorMessage"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Header Section -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="jumbotron bg-gradient-primary text-white p-4 rounded">
-                    <h1 class="display-4">
-                        <i class="fas fa-chart-line me-3"></i>EdgeFinder
-                    </h1>
-                    <p class="lead">Compare sportsbook odds to prediction markets and find the best betting edges</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-light" onclick="refreshData()">
-                            <i class="fas fa-sync-alt me-2"></i>Refresh Data
-                        </button>
-                        <button class="btn btn-outline-light" onclick="downloadCSV()">
-                            <i class="fas fa-download me-2"></i>Download CSV
-                        </button>
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h1 class="display-4 text-primary">
+                            <i class="fas fa-chart-line me-3"></i>EdgeFinder
+                        </h1>
+                        <p class="lead">Compare sportsbook odds to prediction markets and find the best betting edges</p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button class="btn btn-primary" onclick="refreshData()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="downloadCSV()">
+                                <i class="fas fa-download me-2"></i>Download CSV
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -213,64 +325,6 @@
         </footer>
     </div>
 
-    <!-- Newsletter Signup Modal -->
-    <div class="modal fade" id="newsletterModal" tabindex="-1" aria-labelledby="newsletterModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="newsletterModalLabel">
-                        <i class="fas fa-envelope me-2"></i>Get Weekly EdgeFinder Reports
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                        <h4>Stay Ahead of the Game</h4>
-                        <p class="text-muted">Get weekly reports with the best Robinhood opportunities, most popular picks, biggest payouts, and your hometown favorites!</p>
-                    </div>
-                    
-                    <form id="newsletterForm">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" required placeholder="your@email.com">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="location" class="form-label">Your Hometown (for personalized picks)</label>
-                            <input type="text" class="form-control" id="location" name="location" required placeholder="e.g., Seattle, WA">
-                            <div class="form-text">We'll find the best local team opportunities for you!</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
-                                <label class="form-check-label" for="terms">
-                                    I agree to receive weekly EdgeFinder reports and understand this is for informational purposes only.
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-paper-plane me-2"></i>Subscribe to Weekly Reports
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <div id="newsletterSuccess" class="alert alert-success d-none mt-3">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>Success!</strong> You're now subscribed to weekly EdgeFinder reports. Check your email for confirmation.
-                    </div>
-                    
-                    <div id="newsletterError" class="alert alert-danger d-none mt-3">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Error!</strong> <span id="newsletterErrorMessage"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/app.js"></script>
