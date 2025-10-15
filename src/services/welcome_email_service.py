@@ -52,7 +52,7 @@ class WelcomeEmailService:
                 return False
             
             context = ssl.create_default_context()
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
                 server.starttls(context=context)
                 server.login(self.sender_email, self.sender_password)
                 server.send_message(msg)
@@ -60,6 +60,15 @@ class WelcomeEmailService:
             print(f"✅ Welcome email sent to {recipient_email}")
             return True
             
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"❌ SMTP Authentication failed for {recipient_email}: {e}")
+            return False
+        except smtplib.SMTPConnectError as e:
+            print(f"❌ SMTP Connection failed for {recipient_email}: {e}")
+            return False
+        except smtplib.SMTPException as e:
+            print(f"❌ SMTP Error for {recipient_email}: {e}")
+            return False
         except Exception as e:
             print(f"❌ Failed to send welcome email to {recipient_email}: {e}")
             return False
@@ -69,7 +78,7 @@ class WelcomeEmailService:
         try:
             import requests
             website_url = "https://edgefinder-czi3.onrender.com/api/latest"
-            response = requests.get(website_url, timeout=10)
+            response = requests.get(website_url, timeout=5)  # Reduced timeout
             if response.status_code == 200:
                 return self._parse_live_data(response.text)
         except Exception as e:
